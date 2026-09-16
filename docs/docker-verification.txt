@@ -1,0 +1,20 @@
+Docker/PostgreSQL verification — 2026-09-16
+
+Docker engine: 29.7.2
+Docker Compose: v5.5.1
+Database image: postgres:16-alpine
+PostgreSQL test suite: 77 passed, no skipped tests
+Fresh PostgreSQL migration: passed
+Schema drift check: passed
+Application Docker build: passed (Python 3.12-slim, Linux ARM64)
+Compose config validation: passed
+Compose migration job: exited successfully
+API /health/live: HTTP 200
+API /health/ready: HTTP 200, ready
+API /login: HTTP 200
+Worker heartbeat: detected
+Maintenance first cleanup: completed
+Compose stack teardown: completed
+Isolated PostgreSQL test container: removed
+
+No live Telegram/OpenAI credentials used. No real messages sent.

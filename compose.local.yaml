@@ -1,0 +1,14 @@
+# Local testing only. Stop this service before registering a production webhook.
+services:
+  receiver:
+    build: .
+    env_file: .env
+    command: [python, -m, app.local_receiver]
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    depends_on:
+      api: {condition: service_healthy}

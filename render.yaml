@@ -1,0 +1,89 @@
+# Review Render's current cost estimate before provisioning paid resources.
+services:
+  - type: web
+    name: kindred-api
+    runtime: docker
+    plan: 0.5c-512mb
+    region: frankfurt
+    dockerCommand: python -m app.cloud web
+    healthCheckPath: /health/ready
+    autoDeployTrigger: "off"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: kindred-db
+          property: connectionString
+      - key: APP_URL
+        sync: false
+      - key: ENVIRONMENT
+        value: production
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_WEBHOOK_SECRET
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4.1-mini
+  - type: worker
+    name: kindred-worker
+    runtime: docker
+    plan: 0.5c-512mb
+    region: frankfurt
+    dockerCommand: python -m app.cloud worker
+    autoDeployTrigger: "off"
+    envVars: &shared
+      - key: DATABASE_URL
+        fromDatabase:
+          name: kindred-db
+          property: connectionString
+      - key: ENVIRONMENT
+        value: production
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: APP_URL
+        fromService:
+          type: web
+          name: kindred-api
+          envVarKey: APP_URL
+      - key: TELEGRAM_BOT_TOKEN
+        fromService:
+          type: web
+          name: kindred-api
+          envVarKey: TELEGRAM_BOT_TOKEN
+      - key: TELEGRAM_WEBHOOK_SECRET
+        fromService:
+          type: web
+          name: kindred-api
+          envVarKey: TELEGRAM_WEBHOOK_SECRET
+      - key: OPENAI_API_KEY
+        fromService:
+          type: web
+          name: kindred-api
+          envVarKey: OPENAI_API_KEY
+      - key: OPENAI_MODEL
+        fromService:
+          type: web
+          name: kindred-api
+          envVarKey: OPENAI_MODEL
+  - type: cron
+    name: kindred-retention
+    runtime: docker
+    plan: 0.5c-512mb
+    region: frankfurt
+    schedule: "17 * * * *"
+    dockerCommand: python -m app.cloud purge
+    autoDeployTrigger: "off"
+    envVars: *shared
+
+databases:
+  - name: kindred-db
+    plan: 0.1c-256mb
+    region: frankfurt
+    postgresMajorVersion: "16"
+    databaseName: kindred
+    user: kindred
+    diskSizeGB: 5
+    ipAllowList: []

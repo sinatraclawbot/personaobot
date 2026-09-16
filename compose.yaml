@@ -1,0 +1,55 @@
+name: kindred
+x-app: &app
+  build: .
+  env_file: .env
+  environment:
+    DATABASE_URL: postgresql+psycopg://platform:${POSTGRES_PASSWORD:-platform}@db:5432/platform
+  restart: unless-stopped
+  init: true
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: [ALL]
+  read_only: true
+  tmpfs: [/tmp]
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: platform
+      POSTGRES_USER: platform
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-platform}
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U platform -d platform"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+  migrate:
+    <<: *app
+    command: [alembic, upgrade, head]
+    restart: "no"
+    depends_on:
+      db: {condition: service_healthy}
+  api:
+    <<: *app
+    ports: ["127.0.0.1:8000:8000"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/live')"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+  worker:
+    <<: *app
+    command: [python, -m, app.worker]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    stop_grace_period: 180s
+  maintenance:
+    <<: *app
+    command: [python, -m, app.maintenance]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+volumes:
+  postgres_data:
