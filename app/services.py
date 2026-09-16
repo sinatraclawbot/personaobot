@@ -408,7 +408,7 @@ def send_draft(db, payload, telegram=None, ai=None):
     waiting = db.scalar(
         select(Job.id)
         .where(
-            Job.kind == "update", Job.connection_id == conv.connection_id, Job.status.in_(["queued", "running", "dead"])
+            Job.kind == "update", Job.connection_id == conv.connection_id, Job.status.in_(["queued", "running"])
         )
         .limit(1)
     )
