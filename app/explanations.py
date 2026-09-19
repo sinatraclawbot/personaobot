@@ -2,14 +2,14 @@
 
 REASON_COPY = {
     "owner_takeover": "The account owner replied in Telegram, so automatic replies are paused.",
-    "unsupported_media": "This chat has a photo, voice note, or other media Kindred cannot read yet. A person can continue from here.",
+    "unsupported_media": "This chat has a photo, voice note, or other media PersonaAI cannot read yet. A person can continue from here.",
     "consent_withdrawn": "The client asked not to be contacted. Replies are on hold.",
     "sexual_services": "Held because the chat moved into sexual services, which this profile does not offer.",
     "connection_permission_lost": "Telegram no longer lets this bot reply for this account. Check the business connection in Telegram.",
     "connection_refresh_denied": "Telegram would not confirm this connection, so sending is paused until it is reconnected.",
     "delivery_uncertain": "The last reply may or may not have reached Telegram. Check the chat before sending anything else.",
     "telegram_send_rejected": "Telegram declined the last reply. Nothing further was sent automatically.",
-    "human_mode": "This profile is human-managed, so Kindred is waiting for a person to reply.",
+    "human_mode": "This profile is human-managed, so PersonaAI is waiting for a person to reply.",
     "automation_hourly_limit": "Automatic replies paused after a busy hour. A person can continue, or resume in a little while.",
     "manual_gate_removed": "A manual approval step was removed, so this draft was set aside.",
     "client_returned": "The client wrote again after the owner replied, so automatic replies are back on.",
@@ -24,7 +24,7 @@ REASON_COPY = {
     "coercion": "Held for a safety concern. A person should review before continuing.",
     "trafficking": "Held for a safety concern. A person should review before continuing.",
     "illegal_activity": "Held because the chat may involve something this profile cannot help with.",
-    "uncertain": "Kindred was not sure this was safe to answer automatically, so a person should take a look.",
+    "uncertain": "PersonaAI was not sure this was safe to answer automatically, so a person should take a look.",
     "booking": "The client is asking about a booking or payment. A person should take it from here.",
     "privacy": "This involves private details. A person should continue.",
     "human_request": "The client asked to speak with a person.",
@@ -40,7 +40,7 @@ REASON_COPY = {
 }
 
 DEFAULT_COPY = (
-    "This conversation is waiting for a person to review. It is not broken — Kindred paused so nothing is sent by mistake."
+    "This conversation is waiting for a person to review. It is not broken — PersonaAI paused so nothing is sent by mistake."
 )
 
 

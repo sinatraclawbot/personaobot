@@ -1,7 +1,7 @@
 # Review Render's current cost estimate before provisioning paid resources.
 services:
   - type: web
-    name: kindred-api
+    name: personaai-api
     runtime: docker
     plan: 0.5c-512mb
     region: frankfurt
@@ -11,7 +11,7 @@ services:
     envVars:
       - key: DATABASE_URL
         fromDatabase:
-          name: kindred-db
+          name: personaai-db
           property: connectionString
       - key: APP_URL
         sync: false
@@ -28,7 +28,7 @@ services:
       - key: OPENAI_MODEL
         value: gpt-4.1-mini
   - type: worker
-    name: kindred-worker
+    name: personaai-worker
     runtime: docker
     plan: 0.5c-512mb
     region: frankfurt
@@ -37,7 +37,7 @@ services:
     envVars: &shared
       - key: DATABASE_URL
         fromDatabase:
-          name: kindred-db
+          name: personaai-db
           property: connectionString
       - key: ENVIRONMENT
         value: production
@@ -46,30 +46,30 @@ services:
       - key: APP_URL
         fromService:
           type: web
-          name: kindred-api
+          name: personaai-api
           envVarKey: APP_URL
       - key: TELEGRAM_BOT_TOKEN
         fromService:
           type: web
-          name: kindred-api
+          name: personaai-api
           envVarKey: TELEGRAM_BOT_TOKEN
       - key: TELEGRAM_WEBHOOK_SECRET
         fromService:
           type: web
-          name: kindred-api
+          name: personaai-api
           envVarKey: TELEGRAM_WEBHOOK_SECRET
       - key: OPENAI_API_KEY
         fromService:
           type: web
-          name: kindred-api
+          name: personaai-api
           envVarKey: OPENAI_API_KEY
       - key: OPENAI_MODEL
         fromService:
           type: web
-          name: kindred-api
+          name: personaai-api
           envVarKey: OPENAI_MODEL
   - type: cron
-    name: kindred-retention
+    name: personaai-retention
     runtime: docker
     plan: 0.5c-512mb
     region: frankfurt
@@ -79,11 +79,11 @@ services:
     envVars: *shared
 
 databases:
-  - name: kindred-db
+  - name: personaai-db
     plan: 0.1c-256mb
     region: frankfurt
     postgresMajorVersion: "16"
-    databaseName: kindred
-    user: kindred
+    databaseName: personaai
+    user: personaai
     diskSizeGB: 5
     ipAllowList: []

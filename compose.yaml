@@ -1,4 +1,4 @@
-name: kindred
+name: personaai
 x-app: &app
   build: .
   env_file: .env

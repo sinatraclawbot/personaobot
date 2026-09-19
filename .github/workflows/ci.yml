@@ -28,5 +28,5 @@ jobs:
       - run: ruff check app tests
       - run: alembic upgrade head && alembic check
       - run: pytest -q
-      - run: docker build -t kindred:test .
+      - run: docker build -t personaai:test .
       - run: pip install pip-audit && pip-audit -r requirements.txt

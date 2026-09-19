@@ -51,7 +51,7 @@ def purge_conversation(db, conv):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Kindred operations")
+    parser = argparse.ArgumentParser(description="PersonaAI operations")
     subs = parser.add_subparsers(dest="command", required=True)
     for name in ("create-admin", "set-password", "disable-user"):
         p = subs.add_parser(name)

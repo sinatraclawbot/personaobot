@@ -46,7 +46,7 @@ from .services import audit, eligibility, enqueue, invalidate
 from .worker import lock_number
 
 ROOT = Path(__file__).parent
-app = FastAPI(title="Kindred · Telegram Business", docs_url=None, redoc_url=None, openapi_url=None)
+app = FastAPI(title="PersonaAI · Telegram Business", docs_url=None, redoc_url=None, openapi_url=None)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=trusted_hosts())
 app.mount("/static", StaticFiles(directory=ROOT / "static"), name="static")
 templates = Jinja2Templates(directory=ROOT / "templates")

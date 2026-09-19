@@ -1,4 +1,4 @@
-# Kindred — Telegram Business AI workspace
+# PersonaAI — Telegram Business AI workspace
 
 A working multi-profile messaging MVP for lawful, consensual, **non-sexual adult social companionship**. One official Telegram bot serves independently configured Business accounts. Includes a FastAPI/Jinja dashboard, PostgreSQL schema and Alembic migration, durable workers, AI moderation/replies, approvals, escalations, authentication, membership access, audit records and retention cleanup.
 

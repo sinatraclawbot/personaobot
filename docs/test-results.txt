@@ -6,7 +6,7 @@ Suites: test_explanations, test_pipeline, test_adapters, test_local_receiver, te
 .............                                                            [100%]
 83 passed, 2 skipped, 2 warnings in 4.64s
 
-Skipped: 2 postgres-marked concurrency/lock tests (require disposable TEST_POSTGRES_URL; never the live Kindred DB).
+Skipped: 2 postgres-marked concurrency/lock tests (require disposable TEST_POSTGRES_URL; never the live PersonaAI DB).
 Warnings: upstream Starlette/httpx TestClient deprecations.
 
 Earlier PostgreSQL-16 disposable run (same day): 77 passed, 0 skipped — see historical note in VERIFICATION.md.

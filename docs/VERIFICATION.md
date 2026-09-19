@@ -20,7 +20,7 @@ PostgreSQL migrations and schema drift checks passed on a fresh, isolated Docker
 
 ## Live local stack (same day, operator Mac)
 
-Evidence gathered against the running Compose stack (`kindred-*` services). No secrets recorded here.
+Evidence gathered against the running Compose stack (`personaai-*` services). No secrets recorded here.
 
 - `/health/live` → `{"status":"ok"}`; `/health/ready` → `{"status":"ready"}`.
 - Compose services up: api (healthy), db (healthy), worker, receiver, maintenance.

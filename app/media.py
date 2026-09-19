@@ -1,6 +1,6 @@
 import os, re
 from pathlib import Path
-ROOT = Path(os.environ.get("MEDIA_ROOT", "/tmp/kindred-media"))
+ROOT = Path(os.environ.get("MEDIA_ROOT", "/tmp/personaai-media"))
 ALLOWED = {".jpg", ".jpeg", ".png", ".webp", ".mp4", ".mov"}
 PHOTOS = {".jpg", ".jpeg", ".png", ".webp"}
 VIDEOS = {".mp4", ".mov"}
