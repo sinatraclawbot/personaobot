@@ -45,6 +45,18 @@ class Telegram:
             },
         )
 
+    def get_file(self, file_id):
+        result = self.call("getFile", {"file_id": file_id})
+        path = result.get("file_path")
+        if not path:
+            raise TelegramError("no_file_path")
+        dot = path.rfind(".")
+        suffix = ("" if dot == -1 else "." + path[dot + 1:].lower())
+        url = "https://api.telegram.org/file/bot" + settings().telegram_bot_token + "/" + path
+        r = self.client.get(url, timeout=60)
+        r.raise_for_status()
+        return r.content, suffix
+
     def send_file(self, method, connection_id, chat_id, field, path, caption=""):
         if not settings().telegram_bot_token:
             raise TelegramError("not_configured")

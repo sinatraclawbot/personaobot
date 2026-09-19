@@ -436,11 +436,22 @@ async def draft_action(pid: str, cid: str, did: str, request: Request, user=Depe
 
 @app.post("/profiles/{pid}/conversations/{cid}/reply")
 async def manual_reply(pid: str, cid: str, request: Request, user=Depends(require_csrf), db=Depends(session)):
+    from .media import save_chat_media
     profile, conv = conversation_access(db, user, pid, cid, True)
     reason = eligibility(profile, conv, db.get(Connection, conv.connection_id))
     if reason:
         raise HTTPException(409, reason)
-    value = form_text(await request.form(), "text", 3500)
+    form = await request.form()
+    value = str(form.get("text", "")).strip()
+    upload = form.get("file")
+    media = []
+    if upload is not None and getattr(upload, "filename", ""):
+        try:
+            media = [save_chat_media(pid, upload.filename, await upload.read())]
+        except ValueError:
+            raise HTTPException(400, "bad file") from None
+    if len(value) > 3500 or (not value and not media):
+        raise HTTPException(422, "Provide a message or an attachment")
     invalidate(db, conv, "manual_reply")
     draft = Draft(
         profile_id=pid,
@@ -448,6 +459,7 @@ async def manual_reply(pid: str, cid: str, request: Request, user=Depends(requir
         revision=conv.revision,
         profile_version=profile.version,
         text=value,
+        media=media,
         status="queued",
         approved_by=user.id,
     )
@@ -643,6 +655,16 @@ def media_file(pid, name, user=Depends(require_user), db=Depends(session)):
     from .media import resolve
     profile_access(db, user, pid)
     path = resolve(pid, name)
+    if path is None:
+        raise HTTPException(404)
+    return FileResponse(path)
+
+
+@app.get("/media/{pid}/chat/{name}")
+def chat_media(pid, name, user=Depends(require_user), db=Depends(session)):
+    from .media import resolve_chat
+    profile_access(db, user, pid)
+    path = resolve_chat(pid, name)
     if path is None:
         raise HTTPException(404)
     return FileResponse(path)

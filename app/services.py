@@ -199,6 +199,21 @@ def process_update(db, payload, telegram=None):
         db.add(msg)
     msg.direction = direction
     msg.text = str(data.get("text", data.get("caption", "")))[:10000]
+    if not is_bot and not (msg.media or []):
+        media_id, media_kind = None, None
+        if isinstance(data.get("photo"), list) and data["photo"]:
+            media_id, media_kind = data["photo"][-1].get("file_id"), "photo"
+        elif isinstance(data.get("video"), dict):
+            media_id, media_kind = data["video"].get("file_id"), "video"
+        if media_id:
+            try:
+                content, suffix = telegram.get_file(media_id)
+                if not suffix:
+                    suffix = ".jpg" if media_kind == "photo" else ".mp4"
+                from .media import save_chat_media
+                msg.media = [save_chat_media(profile_id, "m" + suffix, content)]
+            except Exception:
+                msg.media = []
     msg.created = min(float(data.get("date", time.time())), time.time())
     msg.last_update_id = update_id
     msg.event_time = event_time
@@ -436,8 +451,24 @@ def send_draft(db, payload, telegram=None, ai=None):
     # Commit an intent before network IO. A crash or unknown outcome can never cause an automatic resend.
     draft.status = "sending"
     db.commit()
+    attachments = list(draft.media or [])
     try:
-        result = telegram.send(conv.connection_id, conv.chat_id, draft.text)
+        if attachments:
+            from .media import resolve_chat
+            result = None
+            for index, item in enumerate(attachments):
+                path = resolve_chat(profile.id, str(item.get("name", "")))
+                if not path:
+                    continue
+                is_video = item.get("kind") == "video"
+                method = "sendVideo" if is_video else "sendPhoto"
+                field = "video" if is_video else "photo"
+                caption = draft.text if index == 0 else ""
+                result = telegram.send_file(method, conv.connection_id, conv.chat_id, field, path, caption=caption)
+            if result is None:
+                result = telegram.send(conv.connection_id, conv.chat_id, draft.text)
+        else:
+            result = telegram.send(conv.connection_id, conv.chat_id, draft.text)
     except TelegramError as exc:
         if exc.code == 429:
             draft.status = "queued"
@@ -467,7 +498,10 @@ def send_draft(db, payload, telegram=None, ai=None):
                 telegram_id=draft.telegram_id,
                 direction="outgoing",
                 text=draft.text,
+                media=attachments,
                 created=float(result.get("date", time.time())),
             )
         )
+    else:
+        db.get(Message, existing).media = attachments
     audit(db, "system", "message_sent", draft.id, profile.id)

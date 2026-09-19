@@ -2,4 +2,4 @@
 
 .filters{display:flex;gap:10px;margin-bottom:16px}.filters select{margin:0;max-width:220px}
 .status-explain{display:block;white-space:normal;max-width:280px;font-size:11px;color:var(--muted);margin-top:4px;line-height:1.4}
-.thumbgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}.thumbgrid img,.thumbgrid video{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:7px;background:#eef0ea;border:1px solid var(--line)}
+.thumbgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}.msg-media{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;max-width:340px}.msg-media img,.msg-media video{max-width:100%;max-height:320px;border-radius:10px;display:block;border:1px solid var(--line)}
