@@ -2,13 +2,21 @@
 <a class="breadcrumb" href="/">← All conversations</a>
 <header class="page-header"><div><div class="eyebrow">PERSONA</div><h1>{{ profile.name }}</h1><p class="muted"><a href="/profiles/{{ profile.id }}">Edit persona &amp; media ↗</a></p></div><span class="badge {{ 'active' if profile.enabled else 'paused' }}">{{ 'Enabled' if profile.enabled else 'Paused' }}</span></header>
 
-<div class="persona-layout">
-<aside class="waiting-panel">
-  <div class="eyebrow">WAITING</div>
+{% if stories %}
+<div class="story-row">
   {% for c in stories %}
-  <a class="waiting-item {% if conv and conv.id == c.id %}selected{% endif %}" href="/p/{{ profile.id }}?cid={{ c.id }}" data-state="{{ c.state }}" data-unanswered="{{ c.unanswered }}" data-last="{{ c.last_incoming }}"><span class="story-ring stage-{{ c.stage }}"><span class="story-avatar">{{ c.client_name[:1]|upper }}</span></span><span class="waiting-name">{{ c.client_name }}</span></a>
+  <a class="story {% if conv and conv.id == c.id %}selected{% endif %}" href="/p/{{ profile.id }}?cid={{ c.id }}" data-state="{{ c.state }}" data-unanswered="{{ c.unanswered }}" data-last="{{ c.last_incoming }}"><span class="story-ring stage-{{ c.stage }}"><span class="story-avatar">{{ c.client_name[:1]|upper }}</span></span><span class="story-name">{{ c.client_name }}</span></a>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="persona-layout">
+<aside class="conv-list">
+  <div class="eyebrow">CONVERSATIONS</div>
+  {% for c in conversations %}
+  <a class="conv-item {% if conv and conv.id == c.id %}selected{% endif %}" href="/p/{{ profile.id }}?cid={{ c.id }}"><span>{{ c.client_name }}</span><span class="badge {{ c.state }}">{{ c.state }}</span></a>
   {% else %}
-  <p class="muted fine">No conversations waiting for a reply.</p>
+  <p class="muted fine">No conversations yet.</p>
   {% endfor %}
 </aside>
 <div class="conversation-layout">

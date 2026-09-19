@@ -728,6 +728,7 @@ def persona_page(pid: str, request: Request, cid: str = "", error: str = "", use
         config=ProfileConfig(**profile.config).model_dump(),
         media=list_files(pid),
         stories=stories,
+        conversations=conversations,
         conv=conv,
         messages=messages,
         connection=connection,
