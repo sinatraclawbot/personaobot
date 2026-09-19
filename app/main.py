@@ -732,3 +732,19 @@ def persona_page(pid: str, request: Request, cid: str = "", error: str = "", use
         connection=connection,
         error=error,
     )
+
+
+@app.get("/p/{pid}/suggest")
+def suggest_reply(pid: str, cid: str, user=Depends(require_user), db=Depends(session)):
+    from .ai import AI
+    from .services import context_for
+    profile = profile_access(db, user, pid)
+    conv = db.scalar(select(Conversation).where(Conversation.id == cid, Conversation.profile_id == pid))
+    if not conv:
+        raise HTTPException(404, "Not found")
+    try:
+        decision = AI().decide(context_for(db, profile, conv))
+        text = (decision.reply or "").strip()
+    except Exception:
+        text = ""
+    return JSONResponse({"text": text})

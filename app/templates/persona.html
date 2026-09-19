@@ -41,7 +41,7 @@
     {% endif %}
   </div>
   <aside>
-    <section class="panel form-panel"><div class="eyebrow">ABOUT</div><h3>{{ profile.name }}</h3><span class="badge">{{ config.get('chat_language') or config.get('languages', '') }}</span><p class="fine preserve about-text">{{ config.get('personality') or '—' }}</p></section>
+    <section class="panel form-panel"><div class="eyebrow">ABOUT</div><div class="about-tabs"><button type="button" class="tab-button on" data-tab="about">About</button><button type="button" class="tab-button" data-tab="suggest" data-pid="{{ profile.id }}" data-cid="{{ conv.id if conv else '' }}">Suggest reply ✨</button></div><div class="about-pane" data-pane="about"><h3>{{ profile.name }}</h3><span class="badge">{{ config.get('chat_language') or config.get('languages', '') }}</span><p class="fine preserve about-text">{{ config.get('personality') or '—' }}</p></div><div class="about-pane" data-pane="suggest" hidden><p class="fine preserve suggest-text">Generating…</p><div class="actions"><button type="button" class="primary suggest-use">Use in reply</button></div></div></section>
     <section class="panel form-panel"><h2>Gallery</h2><div class="gallery-icons">{% for item in media %}<button type="button" class="gallery-icon" data-copy="{{ item.url }}" data-kind="{{ item.kind }}" title="Attach to reply">{% if item.kind == 'photo' %}<img src="{{ item.url }}" alt="">{% else %}<video src="{{ item.url }}" muted playsinline></video><span class="vid-badge">▶</span>{% endif %}</button>{% else %}<p class="muted">No media yet.</p>{% endfor %}</div></section>
   </aside>
 </div>

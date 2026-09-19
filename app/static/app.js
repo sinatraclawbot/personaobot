@@ -49,7 +49,7 @@ function toast(msg) {
   setInterval(updateStories, 10000);
 })();
 
-// Gallery icons: clicking copies the actual media file into the reply and confirms with text.
+// Gallery icons: clicking attaches the actual media file (photo or video) to the reply.
 document.querySelectorAll('.gallery-icon').forEach(function (btn) {
   btn.addEventListener('click', async function () {
     var url = btn.getAttribute('data-copy');
@@ -102,5 +102,42 @@ document.querySelectorAll('.chat-composer').forEach(function (form) {
         break;
       }
     }
+  });
+});
+
+// About / "Suggest reply" tabs: AI-generated suggested message for the current conversation.
+document.querySelectorAll('.about-tabs').forEach(function (tabs) {
+  tabs.querySelectorAll('.tab-button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      tabs.querySelectorAll('.tab-button').forEach(function (b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      var panel = btn.closest('.panel');
+      var which = btn.getAttribute('data-tab');
+      panel.querySelectorAll('.about-pane').forEach(function (p) {
+        p.hidden = (p.getAttribute('data-pane') !== which);
+      });
+      if (which === 'suggest') {
+        var out = panel.querySelector('.suggest-text');
+        var pid = btn.getAttribute('data-pid');
+        var cid = btn.getAttribute('data-cid');
+        if (!cid) { out.textContent = 'Select a conversation first.'; return; }
+        if (out.dataset.loaded === '1') return;
+        out.dataset.loaded = '1';
+        out.textContent = 'Generating…';
+        fetch('/p/' + pid + '/suggest?cid=' + encodeURIComponent(cid), { credentials: 'same-origin' })
+          .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+          .then(function (d) { out.textContent = d.text || 'No suggestion available yet.'; })
+          .catch(function () { out.textContent = 'Could not generate a suggestion.'; });
+      }
+    });
+  });
+});
+
+// "Use in reply": copy the suggested text into the chat composer.
+document.querySelectorAll('.suggest-use').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var out = btn.closest('.about-pane').querySelector('.suggest-text');
+    var ta = document.querySelector('.chat-composer textarea');
+    if (ta && out) { ta.value = out.textContent; ta.focus(); }
   });
 });
