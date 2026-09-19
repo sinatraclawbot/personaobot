@@ -21,7 +21,7 @@ def save_upload(profile_id, filename, data):
     suffix = Path(filename or "").suffix.lower()
     if suffix not in ALLOWED:
         raise ValueError("unsupported_type")
-    if len(data) > 20 * 1024 * 1024:
+    if len(data) > 50 * 1024 * 1024:
         raise ValueError("too_large")
     safe = re.sub(r"[^a-zA-Z0-9._-]", "", Path(filename).name) or ("file" + suffix)
     dest = folder(profile_id) / safe
