@@ -133,10 +133,10 @@ def test_bot_echo_does_not_generate(db, scope):
     assert not db.scalar(select(Job))
 
 
-def test_unsupported_media_escalates(db, scope):
+def test_visual_media_does_not_escalate(db, scope):
     _, c, v = scope
     process_update(db, incoming(c, photo=[{"file_id": "unused"}]))
-    assert v.state == "escalated" and v.reason == "unsupported_media"
+    assert v.state == "active" and not v.reason
 
 
 def test_unclaimed_connection_cannot_generate(db):

@@ -1,3 +1,4 @@
+import base64
 import os
 import re
 import uuid
@@ -73,3 +74,20 @@ def resolve_chat(profile_id, name):
     if base != path and base not in path.parents:
         return None
     return path if path.is_file() else None
+
+
+_IMAGE_MIME = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
+
+
+def image_data_url(profile_id, name, max_bytes=4 * 1024 * 1024):
+    path = resolve_chat(profile_id, name)
+    if not path:
+        return None
+    try:
+        data = path.read_bytes()
+    except OSError:
+        return None
+    if len(data) > max_bytes:
+        return None
+    mime = _IMAGE_MIME.get(path.suffix.lower(), "image/jpeg")
+    return "data:" + mime + ";base64," + base64.b64encode(data).decode("ascii")

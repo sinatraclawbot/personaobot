@@ -190,10 +190,11 @@ def process_update(db, payload, telegram=None):
     sender = data.get("from", {})
     is_owner = int(sender.get("id", 0)) == connection.owner_id
     is_bot = bool(sender.get("is_bot")) or bool(data.get("sender_business_bot"))
-    supported = isinstance(data.get("text"), str) and not any(
-        k in data for k in ("photo", "video", "document", "voice", "audio", "sticker", "animation")
-    )
-    direction = "outgoing" if is_bot else "owner" if is_owner else "incoming" if supported else "unsupported"
+    unreadable = any(k in data for k in ("document", "voice", "audio", "animation"))
+    visual = any(k in data for k in ("photo", "video", "sticker"))
+    has_text = isinstance(data.get("text"), str) and bool(data.get("text"))
+    supported = (visual or has_text) and not unreadable
+    direction = "outgoing" if is_bot else "owner" if is_owner else ("incoming" if supported else "unsupported")
     if not msg:
         msg = Message(profile_id=profile_id, conversation_id=conv.id, telegram_id=mid)
         db.add(msg)
@@ -205,6 +206,12 @@ def process_update(db, payload, telegram=None):
             media_id, media_kind = data["photo"][-1].get("file_id"), "photo"
         elif isinstance(data.get("video"), dict):
             media_id, media_kind = data["video"].get("file_id"), "video"
+        elif (
+            isinstance(data.get("sticker"), dict)
+            and not data["sticker"].get("is_animated")
+            and not data["sticker"].get("is_video")
+        ):
+            media_id, media_kind = data["sticker"].get("file_id"), "photo"
         if media_id:
             try:
                 content, suffix = telegram.get_file(media_id)
@@ -227,7 +234,7 @@ def process_update(db, payload, telegram=None):
         return
     # Edits do not extend Telegram's 24-hour incoming-message window.
     conv.last_incoming = max(conv.last_incoming, msg.created)
-    if not supported:
+    if unreadable:
         hold(db, conv, "unsupported_media")
         return
     if re.fullmatch(
@@ -276,13 +283,27 @@ def context_for(db, profile, conv):
             .limit(10)
         )
     )
+    messages = []
+    attached = False
+    from .media import image_data_url
+    for row in reversed(rows):
+        entry = {
+            "role": "client" if row.direction == "incoming" else "assistant",
+            "text": row.text[:4000],
+        }
+        if not attached and row.direction == "incoming":
+            for item in row.media or []:
+                if item.get("kind") == "photo":
+                    url = image_data_url(profile.id, item["name"])
+                    if url:
+                        entry["image"] = url
+                        attached = True
+                        break
+        messages.append(entry)
     return {
         "profile": {"name": profile.name, **profile.config},
         "memories": memories,
-        "messages": [
-            {"role": "client" if row.direction == "incoming" else "assistant", "text": row.text[:4000]}
-            for row in reversed(rows)
-        ],
+        "messages": messages,
     }
 
 

@@ -29,6 +29,7 @@ How to talk:
 - Paid adult details in this profile are allowed. Say them calmly if asked.
 - Address: follow meeting_rules. Area first, exact street only after time + package.
 - Photos: follow instructions. Do not send files.
+- The user may send a photo or sticker in the chat. You can see it — react to it naturally in your reply.
 - Adults only. If he sounds under 18, stop.
 Output only her message text.
 """
@@ -78,15 +79,30 @@ class AI:
         except (httpx.HTTPError, ValueError):
             raise AIUnavailable("ai_unavailable") from None
 
-    def _llm_reply(self, context):
+    def _messages(self, context):
         profile = context.get("profile") or {}
         latest = context["messages"][-1]["text"] if context.get("messages") else ""
-        messages = [{"role": "system", "content": system_prompt(profile)}]
+        out = [{"role": "system", "content": system_prompt(profile)}]
         for row in context.get("messages") or []:
             role = "assistant" if row.get("role") == "assistant" else "user"
-            messages.append({"role": role, "content": row.get("text") or ""})
-        if not any(m["role"] == "user" for m in messages[1:]):
-            messages.append({"role": "user", "content": latest or "שלום"})
+            text = row.get("text") or ""
+            image = row.get("image")
+            if image:
+                out.append({
+                    "role": role,
+                    "content": [
+                        {"type": "text", "text": text},
+                        {"type": "image_url", "image_url": {"url": image}},
+                    ],
+                })
+            else:
+                out.append({"role": role, "content": text})
+        if not any(m["role"] == "user" for m in out[1:]):
+            out.append({"role": "user", "content": latest or "שלום"})
+        return out
+
+    def _llm_reply(self, context):
+        messages = self._messages(context)
         data = self.request("chat/completions", {"model": settings().openai_model, "temperature": 0.9, "max_tokens": 400, "messages": messages})
         reply = (data["choices"][0]["message"]["content"] or "").strip()
         if not reply:
@@ -94,14 +110,7 @@ class AI:
         return reply[:3500]
 
     def suggest(self, context):
-        profile = context.get("profile") or {}
-        latest = context["messages"][-1]["text"] if context.get("messages") else ""
-        messages = [{"role": "system", "content": system_prompt(profile)}]
-        for row in context.get("messages") or []:
-            role = "assistant" if row.get("role") == "assistant" else "user"
-            messages.append({"role": role, "content": row.get("text") or ""})
-        if not any(m["role"] == "user" for m in messages[1:]):
-            messages.append({"role": "user", "content": latest or "שלום"})
+        messages = self._messages(context)
         replies = []
         try:
             data = self.request(
