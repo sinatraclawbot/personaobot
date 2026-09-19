@@ -3,7 +3,7 @@ import secrets
 import time
 from pathlib import Path
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
@@ -609,3 +609,34 @@ async def webhook(request: Request, db=Depends(session)):
         if not db.scalar(select(Job.id).where(Job.dedupe == f"update:{payload['update_id']}")):
             raise HTTPException(503, "Inbox persistence failed") from None
     return {"ok": True}
+
+
+@app.get("/profiles/{pid}/card", response_class=HTMLResponse)
+def profile_card(pid, request: Request, user=Depends(require_user), db=Depends(session)):
+    from .media import list_files
+    from .schemas import ProfileConfig
+    profile = profile_access(db, user, pid)
+    return render(request, "card.html", profile=profile, config=ProfileConfig(**profile.config).model_dump(), media=list_files(pid))
+
+@app.post("/profiles/{pid}/media")
+async def profile_media(pid, request: Request, user=Depends(require_csrf), db=Depends(session)):
+    from .media import save_upload
+    profile_access(db, user, pid)
+    form = await request.form()
+    upload = form.get("file")
+    data = await upload.read() if upload is not None else b""
+    name = getattr(upload, "filename", "") or "file.jpg"
+    try:
+        save_upload(pid, name, data)
+    except ValueError:
+        raise HTTPException(400, "bad file")
+    return redirect("/profiles/" + str(pid) + "/card")
+
+@app.get("/media/{pid}/{name}")
+def media_file(pid, name, user=Depends(require_user), db=Depends(session)):
+    from .media import folder
+    profile_access(db, user, pid)
+    path = folder(pid) / name
+    if not path.is_file():
+        raise HTTPException(404)
+    return FileResponse(path)

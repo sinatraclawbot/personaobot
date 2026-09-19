@@ -15,6 +15,25 @@ class RetryJob(Exception):
 class InvalidUpdate(Exception):
     pass
 
+def maybe_send_media(telegram, profile, conv, db):
+    from .media import first_file
+    last = db.scalar(select(Message).where(Message.profile_id == profile.id, Message.conversation_id == conv.id, Message.direction == "incoming").order_by(Message.created.desc()))
+    text = (last.text if last else "") or ""
+    try:
+        import re as _re
+        if _re.search(r"(video|videos)", text, _re.I):
+            path = first_file(profile.id, "video")
+            if path:
+                telegram.send_file("sendVideo", conv.connection_id, conv.chat_id, "video", path)
+                return
+        if _re.search(r"(pic|photo|photos|foto)", text, _re.I):
+            path = first_file(profile.id, "photo")
+            if path:
+                telegram.send_file("sendPhoto", conv.connection_id, conv.chat_id, "photo", path)
+    except Exception:
+        return
+
+
 
 def audit(db, actor, action, target="", profile_id=None):
     db.add(Audit(actor=actor, action=action, target=str(target), profile_id=profile_id))

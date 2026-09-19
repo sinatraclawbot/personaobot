@@ -44,3 +44,19 @@ class Telegram:
                 "link_preview_options": {"is_disabled": True},
             },
         )
+
+    def send_file(self, method, connection_id, chat_id, field, path, caption=""):
+        if not settings().telegram_bot_token:
+            raise TelegramError("not_configured")
+        data = {"business_connection_id": connection_id, "chat_id": str(chat_id), "protect_content": "true"}
+        if caption:
+            data["caption"] = caption[:1024]
+        try:
+            with open(path, "rb") as handle:
+                r = self.client.post("https://api.telegram.org/bot" + settings().telegram_bot_token + "/" + method, data=data, files={field: handle}, timeout=60)
+                payload = r.json()
+        except Exception:
+            raise TelegramError("transport", uncertain=True) from None
+        if not payload.get("ok"):
+            raise TelegramError(payload.get("error_code", 0))
+        return payload["result"]

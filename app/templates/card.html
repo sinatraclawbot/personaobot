@@ -1,0 +1,20 @@
+{% extends 'base.html' %}{% block content %}
+<a class="breadcrumb" href="/profiles/{{ profile.id }}">← Profile</a>
+<header class="page-header"><div><div class="eyebrow">PROFILE CARD</div><h1>{{ profile.name }}</h1></div>
+<span class="badge">{{ config.get('chat_language') or config.get('languages', '') }}</span></header>
+<section class="panel"><h2>Upload media</h2>
+<form method="post" action="/profiles/{{ profile.id }}/media" enctype="multipart/form-data">
+<input type="hidden" name="csrf" value="{{ csrf }}">
+<input type="file" name="file" accept="image/jpeg,image/png,image/webp,video/mp4" required>
+<button class="primary">Upload</button></form>
+<div class="profile-grid">{% for item in media %}
+<article class="profile-card">{% if item.kind == 'photo' %}<img src="{{ item.url }}" style="width:100%;border-radius:8px">{% else %}<video src="{{ item.url }}" controls style="width:100%"></video>{% endif %}<p>{{ item.name }}</p></article>
+{% else %}<p class="muted">No files yet.</p>{% endfor %}</div></section>
+<section class="panel"><h2>Language pack</h2><p><strong>{{ config.get('chat_language') or '-' }}</strong></p>
+<h3>Personality</h3><p class="preserve">{{ config.get('personality') }}</p>
+<h3>Writing style</h3><p class="preserve">{{ config.get('writing_style') }}</p>
+<h3>Instructions</h3><p class="preserve">{{ config.get('instructions') }}</p></section>
+<section class="panel"><h2>Pricing</h2><p class="preserve">{{ config.get('pricing') }}</p>
+<h2>Boundaries</h2><p class="preserve">{{ config.get('boundaries') }}</p>
+<h2>Meeting rules</h2><p class="preserve">{{ config.get('meeting_rules') }}</p></section>
+{% endblock %}
