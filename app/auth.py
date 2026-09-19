@@ -30,7 +30,11 @@ def require_user(request: Request, db=Depends(session)):
 
 async def require_csrf(request: Request, user=Depends(require_user)):
     token = request.headers.get("x-csrf-token")
-    if token is None and request.headers.get("content-type", "").startswith("application/x-www-form-urlencoded"):
+    content_type = request.headers.get("content-type", "")
+    if token is None and (
+        content_type.startswith("application/x-www-form-urlencoded")
+        or content_type.startswith("multipart/form-data")
+    ):
         token = (await request.form()).get("csrf", "")
     if not secrets.compare_digest(str(token or ""), request.state.login.csrf):
         raise HTTPException(403, "Invalid CSRF token")

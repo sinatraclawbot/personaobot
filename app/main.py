@@ -59,7 +59,10 @@ logging.getLogger("httpcore").setLevel(logging.WARNING)
 @app.middleware("http")
 async def security(request, call_next):
     # Bound streaming bodies as well as Content-Length, including chunked requests.
-    if request.method in ("POST", "PUT", "PATCH"):
+    # Multipart uploads are exempt: they are spooled by the upload route, which
+    # enforces its own per-file size limit.
+    content_type = request.headers.get("content-type", "")
+    if request.method in ("POST", "PUT", "PATCH") and not content_type.startswith("multipart/form-data"):
         body = bytearray()
         async for chunk in request.stream():
             body.extend(chunk)
