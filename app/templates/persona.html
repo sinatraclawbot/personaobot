@@ -16,7 +16,7 @@
     {% if error %}<p class="notice danger">{{ error|explain }}</p>{% endif %}
     {% if conv %}
     <section class="panel chat">
-      <div class="section-heading"><div><h2>{{ conv.client_name }}</h2><span class="badge {{ conv.state }}">{{ conv.state }}</span>{% if conv.reason %}<small class="status-explain">{{ conv.reason|explain }}</small>{% endif %}</div><span class="head-actions"><a class="button" href="/profiles/{{ profile.id }}/conversations/{{ conv.id }}">Full view ↗</a></span></div>
+      <div class="section-heading"><div><h2>{{ conv.client_name }}</h2><span class="badge {{ conv.state }}">{{ conv.state }}</span>{% if conv.reason %}<small class="status-explain">{{ conv.reason|explain }}</small>{% endif %}</div></div>
       <div class="transcript">
         {% for msg in messages %}
         <article class="message {{ msg.direction }}"><div class="message-meta">{{ 'Client' if msg.direction in ['incoming','unsupported'] else 'Account owner' if msg.direction == 'owner' else 'Assistant' }} <span>{{ msg.created|date }}</span></div>
@@ -34,7 +34,7 @@
         <button class="primary">Send</button>
       </form>
       {% else %}
-      <div class="chat-composer chat-blocked"><span class="muted">This conversation is {{ conv.state }} — use Full view ↗ to resume.</span></div>
+      <div class="chat-composer chat-blocked"><span class="muted">This conversation is {{ conv.state }}.</span></div>
       {% endif %}
     </section>
     {% else %}
