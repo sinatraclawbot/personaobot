@@ -697,10 +697,14 @@ def persona_page(pid: str, request: Request, cid: str = "", user=Depends(require
         )
         messages = list(reversed(messages))
         connection = db.get(Connection, conv.connection_id)
+    from .media import list_files
+    from .schemas import ProfileConfig
     return render(
         request,
         "persona.html",
         profile=profile,
+        config=ProfileConfig(**profile.config).model_dump(),
+        media=list_files(pid),
         conversations=conversations,
         conv=conv,
         messages=messages,

@@ -27,6 +27,8 @@
     {% endif %}
   </div>
   <aside>
+    <section class="panel form-panel"><div class="eyebrow">ABOUT</div><h3>{{ profile.name }}</h3><span class="badge">{{ config.get('chat_language') or config.get('languages', '') }}</span><p class="fine preserve about-text">{{ config.get('personality') or '—' }}</p></section>
+    <section class="panel form-panel"><h2>Gallery</h2><div class="thumbgrid">{% for item in media %}{% if item.kind == 'photo' %}<img src="{{ item.url }}" alt="">{% else %}<video src="{{ item.url }}" muted playsinline></video>{% endif %}{% else %}<p class="muted">No media yet.</p>{% endfor %}</div></section>
     <section class="panel form-panel"><h2>Conversations</h2>
       {% for c in conversations %}
       <div class="connection"><a href="/p/{{ profile.id }}?cid={{ c.id }}" class="client-link">{{ c.client_name }}</a><span class="badge {{ c.state }}">{{ c.state }}</span><small>{{ c.updated|date }}</small></div>
