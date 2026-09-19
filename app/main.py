@@ -766,3 +766,25 @@ def suggest_reply(pid: str, cid: str, user=Depends(require_user), db=Depends(ses
     except Exception:
         suggestions = []
     return JSONResponse({"suggestions": suggestions})
+
+
+@app.get("/p/{pid}/chat/{cid}")
+def chat_fragment(pid: str, cid: str, request: Request, user=Depends(require_user), db=Depends(session)):
+    profile = profile_access(db, user, pid)
+    conv = db.scalar(select(Conversation).where(Conversation.id == cid, Conversation.profile_id == pid))
+    if not conv:
+        raise HTTPException(404, "Not found")
+    messages = list(
+        db.scalars(
+            select(Message)
+            .where(Message.profile_id == pid, Message.conversation_id == conv.id)
+            .order_by(Message.created.desc(), Message.telegram_id.desc())
+            .limit(100)
+        )
+    )
+    messages = list(reversed(messages))
+    csrf = getattr(getattr(request.state, "login", None), "csrf", "")
+    html = templates.env.get_template("chat_panel.html").render(
+        profile=profile, conv=conv, messages=messages, csrf=csrf,
+    )
+    return JSONResponse({"html": html, "cid": conv.id})

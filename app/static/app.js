@@ -79,30 +79,30 @@ document.querySelectorAll('.gallery-icon').forEach(function (btn) {
   });
 });
 
-// Chat composer: pasting an image attaches it to the reply file input.
-document.querySelectorAll('.chat-composer').forEach(function (form) {
-  var ta = form.querySelector('textarea');
-  var input = form.querySelector('input[name=file]');
-  if (!ta || !input) return;
-  ta.addEventListener('paste', function (e) {
-    var items = e.clipboardData && e.clipboardData.items;
-    if (!items) return;
-    for (var i = 0; i < items.length; i++) {
-      var it = items[i];
-      if (it.type && it.type.indexOf('image/') === 0) {
-        var blob = it.getAsFile();
-        if (blob) {
-          try {
-            var dt = new DataTransfer();
-            dt.items.add(new File([blob], 'pasted.png', { type: blob.type }));
-            input.files = dt.files;
-            form.querySelector('.attach').classList.add('has-file');
-          } catch (err) {}
-        }
-        break;
+// Chat composer: pasting an image attaches it to the reply file input (delegated so
+// it keeps working after the chat is swapped via AJAX).
+document.addEventListener('paste', function (e) {
+  var ta = e.target;
+  if (!ta || !ta.matches || !ta.matches('.chat-composer textarea')) return;
+  var form = ta.closest('.chat-composer');
+  var input = form && form.querySelector('input[name=file]');
+  var items = e.clipboardData && e.clipboardData.items;
+  if (!items || !input) return;
+  for (var i = 0; i < items.length; i++) {
+    var it = items[i];
+    if (it.type && it.type.indexOf('image/') === 0) {
+      var blob = it.getAsFile();
+      if (blob) {
+        try {
+          var dt = new DataTransfer();
+          dt.items.add(new File([blob], 'pasted.png', { type: blob.type }));
+          input.files = dt.files;
+          form.querySelector('.attach').classList.add('has-file');
+        } catch (err) {}
       }
+      break;
     }
-  });
+  }
 });
 
 // About / "Suggest reply" tabs: two AI-generated suggested messages for the current conversation.
@@ -159,3 +159,45 @@ function scrollTranscriptToBottom() {
 scrollTranscriptToBottom();
 window.addEventListener('load', scrollTranscriptToBottom);
 setTimeout(scrollTranscriptToBottom, 400);
+
+// Smooth conversation switching: load the chat via AJAX instead of reloading the page.
+function resetSuggest() {
+  var btn = document.querySelector('.about-tabs [data-tab=suggest]');
+  if (btn) delete btn.dataset.loaded;
+  var pane = document.querySelector('.about-pane[data-pane=suggest]');
+  if (pane) {
+    var s1 = pane.querySelector('.s1'); if (s1) s1.textContent = '';
+    var s2 = pane.querySelector('.s2'); if (s2) s2.textContent = '';
+    var st = pane.querySelector('.suggest-status'); if (st) st.textContent = '';
+  }
+}
+function loadChat(url, item) {
+  fetch(url, { credentials: 'same-origin' })
+    .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+    .then(function (d) {
+      var wrap = document.getElementById('chat-wrap');
+      if (wrap) wrap.innerHTML = d.html;
+      document.querySelectorAll('.conv-item').forEach(function (i) { i.classList.remove('selected'); });
+      if (item) item.classList.add('selected');
+      var sug = document.querySelector('.about-tabs [data-tab=suggest]');
+      if (sug && d.cid) sug.setAttribute('data-cid', d.cid);
+      resetSuggest();
+      scrollTranscriptToBottom();
+      setTimeout(scrollTranscriptToBottom, 200);
+    })
+    .catch(function () { window.location.reload(); });
+}
+document.querySelectorAll('.conv-item').forEach(function (item) {
+  item.addEventListener('click', function (e) {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+    e.preventDefault();
+    loadChat(item.getAttribute('data-chat'), item);
+    history.pushState({}, '', item.getAttribute('href'));
+  });
+});
+window.addEventListener('popstate', function () {
+  var pid = (document.querySelector('.conv-list') || {}).getAttribute('data-pid');
+  var cid = new URLSearchParams(window.location.search).get('cid');
+  if (pid && cid) loadChat('/p/' + pid + '/chat/' + cid, null);
+  else if (pid) window.location.reload();
+});
