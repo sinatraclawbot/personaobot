@@ -40,30 +40,27 @@ document.querySelectorAll('form').forEach(form => {
   setInterval(updateStories, 10000);
 })();
 
-// Gallery icons: click to copy (photo -> image bytes, video -> link) for pasting into chat.
+// Gallery icons: clicking attaches the actual media file (photo or video) to the reply.
 document.querySelectorAll('.gallery-icon').forEach(function (btn) {
   btn.addEventListener('click', async function () {
     var url = btn.getAttribute('data-copy');
-    var kind = btn.getAttribute('data-kind');
-    var copied = false;
-    async function copyText(text) {
-      try { await navigator.clipboard.writeText(text); return true; } catch (e) { return false; }
-    }
-    if (kind === 'photo') {
-      try {
-        var resp = await fetch(url);
-        var blob = await resp.blob();
-        await navigator.clipboard.write([new ClipboardItem({ [blob.type || 'image/png']: blob })]);
-        copied = true;
-      } catch (e) { copied = false; }
-      if (!copied) copied = await copyText(location.origin + url);
-    } else {
-      copied = await copyText(location.origin + url);
-    }
-    if (copied) {
+    var form = document.querySelector('.chat-composer');
+    var input = form && form.querySelector('input[name=file]');
+    if (!input) return;
+    try {
+      var resp = await fetch(url);
+      var blob = await resp.blob();
+      var ext = (url.split('?')[0].split('.').pop() || 'bin').toLowerCase();
+      var name = 'media.' + ext;
+      var dt = new DataTransfer();
+      dt.items.add(new File([blob], name, { type: blob.type || 'application/octet-stream' }));
+      input.files = dt.files;
+      var attach = form.querySelector('.attach');
+      attach.classList.add('has-file');
+      attach.title = 'Attached: ' + name;
       btn.classList.add('copied');
       setTimeout(function () { btn.classList.remove('copied'); }, 1200);
-    }
+    } catch (e) {}
   });
 });
 
