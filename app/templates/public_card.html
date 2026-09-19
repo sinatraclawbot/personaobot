@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{{ profile.name }} · {{ config.get('chat_language') or config.get('languages', '') }}</title>
+  <link rel="stylesheet" href="/static/card.css">
+</head>
+<body>
+  <div class="card-shell">
+    <header class="hero">
+      <div class="brand">kindred<span>.</span></div>
+      <div class="hero-body">
+        <div class="eyebrow">A profile</div>
+        <h1>{{ profile.name }}</h1>
+        <p class="tag">{{ config.get('chat_language') or config.get('languages', '') }}</p>
+      </div>
+    </header>
+
+    <main>
+      {% if media %}
+      <section class="gallery">
+        {% for item in media %}
+          {% if item.kind == 'photo' %}
+            <figure class="tile"><img src="/p/{{ profile.id }}/media/{{ item.name }}" alt="{{ profile.name }}" loading="lazy"></figure>
+          {% else %}
+            <figure class="tile video"><video src="/p/{{ profile.id }}/media/{{ item.name }}" controls playsinline preload="metadata"></video></figure>
+          {% endif %}
+        {% endfor %}
+      </section>
+      {% endif %}
+
+      {% if config.get('personality') %}
+      <section class="about">
+        <h2>About {{ profile.name }}</h2>
+        <p class="preserve">{{ config.get('personality') }}</p>
+      </section>
+      {% endif %}
+
+      <section class="facts">
+        {% for key, label in [('languages','Languages'),('pricing','Pricing'),('availability','Availability'),('meeting_rules','Meeting rules'),('boundaries','Boundaries')] %}
+          {% if config.get(key) %}
+          <div class="fact">
+            <h3>{{ label }}</h3>
+            <p class="preserve">{{ config.get(key) }}</p>
+          </div>
+          {% endif %}
+        {% endfor %}
+      </section>
+
+      <footer class="disclosure">
+        <p>{{ profile.name }} is an AI assistant, not a real person. Adult audiences only. Informational content; no payment collection in chat.</p>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>

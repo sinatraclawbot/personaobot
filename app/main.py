@@ -280,6 +280,7 @@ async def profile_create(request: Request, user=Depends(require_csrf), db=Depend
 
 @app.get("/profiles/{pid}", response_class=HTMLResponse)
 def profile_page(pid: str, request: Request, user=Depends(require_user), db=Depends(session)):
+    from .media import list_files
     profile = profile_access(db, user, pid)
     connections = list(
         db.scalars(select(Connection).where(Connection.profile_id == pid).order_by(Connection.established.desc()))
@@ -290,6 +291,8 @@ def profile_page(pid: str, request: Request, user=Depends(require_user), db=Depe
         profile=profile,
         config=ProfileConfig(**profile.config).model_dump(),
         connections=connections,
+        media=list_files(pid),
+        public_url=settings().app_url.rstrip("/") + f"/p/{pid}",
     )
 
 
@@ -630,13 +633,40 @@ async def profile_media(pid, request: Request, user=Depends(require_csrf), db=De
         save_upload(pid, name, data)
     except ValueError:
         raise HTTPException(400, "bad file")
-    return redirect("/profiles/" + str(pid) + "/card")
+    return redirect("/profiles/" + str(pid))
 
 @app.get("/media/{pid}/{name}")
 def media_file(pid, name, user=Depends(require_user), db=Depends(session)):
-    from .media import folder
+    from .media import resolve
     profile_access(db, user, pid)
-    path = folder(pid) / name
-    if not path.is_file():
+    path = resolve(pid, name)
+    if path is None:
         raise HTTPException(404)
+    return FileResponse(path)
+
+
+@app.get("/p/{pid}", response_class=HTMLResponse)
+def public_profile(pid: str, request: Request, db=Depends(session)):
+    from .media import list_files
+    profile = db.get(Profile, pid)
+    if not profile or not profile.enabled or not profile.lawful_reviewed:
+        raise HTTPException(404, "Not found")
+    return render(
+        request,
+        "public_card.html",
+        profile=profile,
+        config=ProfileConfig(**profile.config).model_dump(),
+        media=list_files(pid),
+    )
+
+
+@app.get("/p/{pid}/media/{name}")
+def public_media(pid: str, name: str, db=Depends(session)):
+    from .media import resolve
+    profile = db.get(Profile, pid)
+    if not profile or not profile.enabled or not profile.lawful_reviewed:
+        raise HTTPException(404, "Not found")
+    path = resolve(pid, name)
+    if path is None:
+        raise HTTPException(404, "Not found")
     return FileResponse(path)

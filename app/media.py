@@ -34,3 +34,13 @@ def first_file(profile_id, kind):
         if Path(item["path"]).suffix.lower() in wanted:
             return item["path"]
     return None
+
+
+def resolve(profile_id, name):
+    base = folder(profile_id).resolve()
+    if not re.fullmatch(r"[a-zA-Z0-9._-]+", name or ""):
+        return None
+    path = (base / name).resolve()
+    if base != path and base not in path.parents:
+        return None
+    return path if path.is_file() else None
