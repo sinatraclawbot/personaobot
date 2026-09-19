@@ -150,9 +150,12 @@ document.querySelectorAll('.suggest-use').forEach(function (btn) {
 
 // Auto-scroll the conversation transcript to the latest message on load.
 function scrollTranscriptToBottom() {
-  document.querySelectorAll('.chat .transcript').forEach(function (el) {
+  document.querySelectorAll('.transcript').forEach(function (el) {
     el.scrollTop = el.scrollHeight;
+    var last = el.querySelector('article:last-child');
+    if (last) last.scrollIntoView({ block: 'end' });
   });
 }
 scrollTranscriptToBottom();
 window.addEventListener('load', scrollTranscriptToBottom);
+setTimeout(scrollTranscriptToBottom, 400);
