@@ -1,9 +1,9 @@
 import os, re
 from pathlib import Path
 ROOT = Path(os.environ.get("MEDIA_ROOT", "/tmp/personaai-media"))
-ALLOWED = {".jpg", ".jpeg", ".png", ".webp", ".mp4", ".mov"}
+ALLOWED = {".jpg", ".jpeg", ".png", ".webp", ".mp4", ".mov", ".m4v"}
 PHOTOS = {".jpg", ".jpeg", ".png", ".webp"}
-VIDEOS = {".mp4", ".mov"}
+VIDEOS = {".mp4", ".mov", ".m4v"}
 
 def folder(profile_id):
     path = ROOT / re.sub(r"[^a-zA-Z0-9_-]", "", profile_id)
