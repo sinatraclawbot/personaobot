@@ -8,6 +8,7 @@ class ProfileConfig(BaseModel):
     writing_style: str = Field(
         default="Brief, natural messages. Disclose that you are an AI assistant.", max_length=2000
     )
+    chat_language: str = Field(default="Diana HE · spoiled GFE · wealthy TA", max_length=80)
     languages: str = Field(default="English", max_length=300)
     pricing: str = Field(default="", max_length=2000)
     availability: str = Field(default="", max_length=2000)
