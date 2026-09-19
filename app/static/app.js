@@ -105,7 +105,8 @@ document.querySelectorAll('.chat-composer').forEach(function (form) {
   });
 });
 
-// About / "Suggest reply" tabs: AI-generated suggested message for the current conversation.
+// About / "Suggest reply" tabs: two AI-generated suggested messages for the current conversation.
+var suggestions = [];
 document.querySelectorAll('.about-tabs').forEach(function (tabs) {
   tabs.querySelectorAll('.tab-button').forEach(function (btn) {
     btn.addEventListener('click', function () {
@@ -117,27 +118,32 @@ document.querySelectorAll('.about-tabs').forEach(function (tabs) {
         p.hidden = (p.getAttribute('data-pane') !== which);
       });
       if (which === 'suggest') {
-        var out = panel.querySelector('.suggest-text');
         var pid = btn.getAttribute('data-pid');
         var cid = btn.getAttribute('data-cid');
-        if (!cid) { out.textContent = 'Select a conversation first.'; return; }
-        if (out.dataset.loaded === '1') return;
-        out.dataset.loaded = '1';
-        out.textContent = 'Generating…';
+        var status = panel.querySelector('.suggest-status');
+        if (!cid) { status.textContent = 'Select a conversation first.'; return; }
+        if (btn.dataset.loaded === '1') return;
+        btn.dataset.loaded = '1';
+        status.textContent = 'Generating…';
         fetch('/p/' + pid + '/suggest?cid=' + encodeURIComponent(cid), { credentials: 'same-origin' })
           .then(function (r) { if (!r.ok) throw 0; return r.json(); })
-          .then(function (d) { out.textContent = d.text || 'No suggestion available yet.'; })
-          .catch(function () { out.textContent = 'Could not generate a suggestion.'; });
+          .then(function (d) {
+            suggestions = d.suggestions || [];
+            panel.querySelector('.s1').textContent = suggestions[0] || '';
+            panel.querySelector('.s2').textContent = suggestions[1] || '';
+            status.textContent = suggestions.length ? '' : 'No suggestions.';
+          })
+          .catch(function () { status.textContent = 'Could not generate suggestions.'; });
       }
     });
   });
 });
 
-// "Use in reply": copy the suggested text into the chat composer.
+// "Use" buttons copy the corresponding suggestion into the chat composer.
 document.querySelectorAll('.suggest-use').forEach(function (btn) {
   btn.addEventListener('click', function () {
-    var out = btn.closest('.about-pane').querySelector('.suggest-text');
+    var idx = parseInt(btn.getAttribute('data-idx'), 10);
     var ta = document.querySelector('.chat-composer textarea');
-    if (ta && out) { ta.value = out.textContent; ta.focus(); }
+    if (ta && suggestions[idx]) { ta.value = suggestions[idx]; ta.focus(); }
   });
 });

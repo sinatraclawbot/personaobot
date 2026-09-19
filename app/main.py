@@ -743,8 +743,7 @@ def suggest_reply(pid: str, cid: str, user=Depends(require_user), db=Depends(ses
     if not conv:
         raise HTTPException(404, "Not found")
     try:
-        decision = AI().decide(context_for(db, profile, conv))
-        text = (decision.reply or "").strip()
+        suggestions = AI().suggest(context_for(db, profile, conv))
     except Exception:
-        text = ""
-    return JSONResponse({"text": text})
+        suggestions = []
+    return JSONResponse({"suggestions": suggestions})

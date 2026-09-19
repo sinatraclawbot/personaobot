@@ -93,6 +93,40 @@ class AI:
             raise AIUnavailable("empty_reply")
         return reply[:3500]
 
+    def suggest(self, context):
+        profile = context.get("profile") or {}
+        latest = context["messages"][-1]["text"] if context.get("messages") else ""
+        messages = [{"role": "system", "content": system_prompt(profile)}]
+        for row in context.get("messages") or []:
+            role = "assistant" if row.get("role") == "assistant" else "user"
+            messages.append({"role": role, "content": row.get("text") or ""})
+        if not any(m["role"] == "user" for m in messages[1:]):
+            messages.append({"role": "user", "content": latest or "שלום"})
+        replies = []
+        try:
+            data = self.request(
+                "chat/completions",
+                {"model": settings().openai_model, "temperature": 0.9, "max_tokens": 400, "n": 2, "messages": messages},
+            )
+            for choice in data.get("choices") or []:
+                text = (choice.get("message", {}).get("content") or "").strip()
+                if text and text not in replies:
+                    replies.append(text[:3500])
+        except Exception:
+            replies = []
+        if len(replies) < 2:
+            try:
+                data = self.request(
+                    "chat/completions",
+                    {"model": settings().openai_model, "temperature": 0.5, "max_tokens": 400, "messages": messages},
+                )
+                text = (data.get("choices", [{}])[0].get("message", {}).get("content") or "").strip()
+                if text and text not in replies:
+                    replies.append(text[:3500])
+            except Exception:
+                pass
+        return replies[:2]
+
     def decide(self, context, candidate=None):
         profile = context.get("profile") or {}
         latest = context["messages"][-1]["text"] if context.get("messages") else ""
