@@ -6,8 +6,20 @@
 .about-text{margin-top:10px}
 .story-row{display:flex;gap:16px;overflow-x:auto;padding:6px 2px 16px;margin-bottom:6px}
 .story{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:72px}
-.story-ring{width:58px;height:58px;border-radius:50%;padding:3px;background:linear-gradient(135deg,#9bb77f,#234e3d,#d9b98c)}
-.story-ring.on{box-shadow:0 0 0 2.5px #234e3d}
+.story-ring{width:58px;height:58px;border-radius:50%;padding:3px;background:#9bb77f}
+.stage-active{background:#4c9a52}
+.stage-waiting{background:#e0a100}
+.stage-paused{background:#4a7fb5}
+.stage-escalated{background:#e07a3c}
+.stage-blocked{background:#c0392b}
+.story.selected .story-name{font-weight:600;color:var(--ink)}
+@keyframes storyblink{0%,100%{opacity:1}50%{opacity:.3}}
+.blink1{animation:storyblink 2.4s linear infinite}
+.blink2{animation:storyblink 1.7s linear infinite}
+.blink3{animation:storyblink 1.1s linear infinite}
+.blink4{animation:storyblink 0.6s linear infinite}
+.blink5{animation:storyblink 0.35s linear infinite}
+@media(prefers-reduced-motion:reduce){.blink1,.blink2,.blink3,.blink4,.blink5{animation:none!important}}
 .story-avatar{width:100%;height:100%;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-family:Georgia,serif;font-size:22px;color:#234e3d;border:2px solid #fff}
 .story-name{font-size:10px;color:#55604f;max-width:76px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chat{padding:0}

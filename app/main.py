@@ -699,13 +699,27 @@ def persona_page(pid: str, request: Request, cid: str = "", user=Depends(require
         connection = db.get(Connection, conv.connection_id)
     from .media import list_files
     from .schemas import ProfileConfig
+    now = time.time()
+    stories = []
+    for c in conversations:
+        unanswered = c.last_incoming > c.last_sent
+        wait = (now - c.last_incoming) / 60 if unanswered else 0
+        stage = c.state if c.state in ("blocked", "escalated", "paused") else ("waiting" if wait > 4 else "active")
+        stories.append({
+            "id": c.id,
+            "client_name": c.client_name,
+            "state": c.state,
+            "stage": stage,
+            "unanswered": 1 if unanswered else 0,
+            "last_incoming": c.last_incoming,
+        })
     return render(
         request,
         "persona.html",
         profile=profile,
         config=ProfileConfig(**profile.config).model_dump(),
         media=list_files(pid),
-        conversations=conversations,
+        stories=stories,
         conv=conv,
         messages=messages,
         connection=connection,
