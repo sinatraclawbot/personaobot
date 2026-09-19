@@ -377,6 +377,9 @@ async def conversation_state(pid: str, cid: str, request: Request, user=Depends(
     form = await request.form()
     action = form.get("action")
     note = form_text(form, "note", 1000)
+    next_url = str(form.get("next", ""))
+    if not (next_url.startswith("/p/") or next_url.startswith("/profiles/")):
+        next_url = f"/profiles/{pid}/conversations/{cid}"
     if action not in ("resume", "pause", "block"):
         raise HTTPException(422, "Invalid action")
     if conv.state == "blocked" and action != "block":
@@ -395,7 +398,7 @@ async def conversation_state(pid: str, cid: str, request: Request, user=Depends(
             {"profile_id": pid, "conversation_id": cid, "revision": conv.revision},
         )
     db.commit()
-    return redirect(f"/profiles/{pid}/conversations/{cid}")
+    return redirect(next_url)
 
 
 @app.post("/profiles/{pid}/conversations/{cid}/drafts/{did}")
@@ -438,23 +441,27 @@ async def draft_action(pid: str, cid: str, did: str, request: Request, user=Depe
 async def manual_reply(pid: str, cid: str, request: Request, user=Depends(require_csrf), db=Depends(session)):
     from .media import save_chat_media
     profile, conv = conversation_access(db, user, pid, cid, True)
-    reason = eligibility(profile, conv, db.get(Connection, conv.connection_id))
-    if reason:
-        raise HTTPException(409, reason)
     form = await request.form()
     value = str(form.get("text", "")).strip()
     next_url = str(form.get("next", ""))
     if not (next_url.startswith("/p/") or next_url.startswith("/profiles/")):
         next_url = f"/profiles/{pid}/conversations/{cid}"
+
+    def _err(reason):
+        return redirect(next_url + ("&" if "?" in next_url else "?") + "error=" + reason)
+
+    reason = eligibility(profile, conv, db.get(Connection, conv.connection_id))
+    if reason:
+        return _err(reason)
     upload = form.get("file")
     media = []
     if upload is not None and getattr(upload, "filename", ""):
         try:
             media = [save_chat_media(pid, upload.filename, await upload.read())]
         except ValueError:
-            raise HTTPException(400, "bad file") from None
+            return _err("bad_file")
     if len(value) > 3500 or (not value and not media):
-        raise HTTPException(422, "Provide a message or an attachment")
+        return _err("empty_reply")
     invalidate(db, conv, "manual_reply")
     draft = Draft(
         profile_id=pid,
@@ -674,7 +681,7 @@ def chat_media(pid, name, user=Depends(require_user), db=Depends(session)):
 
 
 @app.get("/p/{pid}", response_class=HTMLResponse)
-def persona_page(pid: str, request: Request, cid: str = "", user=Depends(require_user), db=Depends(session)):
+def persona_page(pid: str, request: Request, cid: str = "", error: str = "", user=Depends(require_user), db=Depends(session)):
     profile = profile_access(db, user, pid)
     conversations = list(
         db.scalars(
@@ -723,4 +730,5 @@ def persona_page(pid: str, request: Request, cid: str = "", user=Depends(require
         conv=conv,
         messages=messages,
         connection=connection,
+        error=error,
     )

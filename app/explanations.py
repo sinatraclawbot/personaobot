@@ -37,6 +37,8 @@ REASON_COPY = {
     "context_changed": "The conversation moved on, so this draft is out of date.",
     "worker_interrupted_during_send": "Sending was interrupted. Check Telegram before writing again.",
     "approver_access_revoked": "The person who approved this draft no longer has access.",
+    "empty_reply": "Type a message or attach a photo or video before sending.",
+    "bad_file": "That file type is not supported. Use a photo (JPG/PNG/WebP) or video (MP4/MOV/M4V).",
 }
 
 DEFAULT_COPY = (

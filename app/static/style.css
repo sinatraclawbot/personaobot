@@ -35,6 +35,8 @@
 .chat{padding:0}
 .chat .section-heading{margin:0;padding:18px 22px 12px;border-bottom:1px solid var(--line)}
 .chat .transcript{max-height:460px}
+.head-actions{display:flex;align-items:center;gap:9px}
+.chat-blocked{padding:18px 22px}
 .chat-composer{display:flex;align-items:flex-end;gap:10px;padding:14px 16px;border-top:1px solid var(--line);background:#fcfdfb}
 .chat-composer textarea{flex:1;resize:none;margin:0}
 .chat-composer .attach{display:inline-flex;align-items:center;justify-content:center;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;font-size:16px;line-height:1}
