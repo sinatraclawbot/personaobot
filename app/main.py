@@ -707,28 +707,45 @@ def persona_page(pid: str, request: Request, cid: str = "", error: str = "", use
     from .media import list_files
     from .schemas import ProfileConfig
     now = time.time()
-    stories = []
+
+    def _rel(ts):
+        delta = int(now - ts) if ts else 0
+        if delta < 60:
+            return "now"
+        if delta < 3600:
+            return f"{delta // 60} min"
+        if delta < 86400:
+            return f"{delta // 3600} h"
+        return f"{delta // 86400} d"
+
+    conversation_items = []
     for c in conversations:
-        unanswered = c.last_incoming > c.last_sent
-        wait = (now - c.last_incoming) / 60 if unanswered else 0
-        stage = c.state if c.state in ("blocked", "escalated", "paused") else ("waiting" if wait > 4 else "active")
-        stories.append({
+        last = db.scalar(
+            select(Message)
+            .where(Message.profile_id == pid, Message.conversation_id == c.id)
+            .order_by(Message.created.desc(), Message.telegram_id.desc())
+            .limit(1)
+        )
+        if last is not None and last.media:
+            kind = last.media[0].get("kind") if isinstance(last.media, list) and last.media else "photo"
+            preview = "📷 Photo" if kind == "photo" else "🎬 Video"
+        else:
+            preview = (last.text if last is not None else "")[:120]
+        conversation_items.append({
             "id": c.id,
             "client_name": c.client_name,
             "state": c.state,
-            "stage": stage,
-            "unanswered": 1 if unanswered else 0,
-            "last_incoming": c.last_incoming,
+            "unanswered": c.last_incoming > c.last_sent,
+            "preview": preview,
+            "relative": _rel(c.updated),
         })
-    stories = [s for s in stories if s["unanswered"] and s["state"] != "blocked"]
     return render(
         request,
         "persona.html",
         profile=profile,
         config=ProfileConfig(**profile.config).model_dump(),
         media=list_files(pid),
-        stories=stories,
-        conversations=conversations,
+        conversation_items=conversation_items,
         conv=conv,
         messages=messages,
         connection=connection,

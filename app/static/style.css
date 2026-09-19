@@ -46,9 +46,14 @@
 .persona-layout{display:grid;grid-template-columns:200px minmax(0,1fr);gap:20px;align-items:start}
 .conv-list{position:sticky;top:0;display:flex;flex-direction:column;gap:2px;padding:6px 2px}
 .conv-list .eyebrow{margin-bottom:4px}
-.conv-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:8px;font-size:12px;color:#33493f}
+.conv-item{display:block;padding:9px 11px;border-radius:10px}
 .conv-item:hover{background:#e9efe4}
 .conv-item.selected{background:#e9efe4}
+.conv-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.conv-name{font-weight:600;font-size:13px;color:#263c33;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.conv-time{font-size:10px;color:#98a08f;white-space:nowrap}
+.conv-preview{font-size:11px;color:#788078;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;margin-top:2px}
+.wait-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#e0a100;margin-left:5px;vertical-align:middle}
 @media(max-width:900px){.persona-layout{grid-template-columns:1fr}}
 .chat-blocked{padding:18px 22px}
 .chat-composer{display:flex;align-items:flex-end;gap:10px;padding:14px 16px;border-top:1px solid var(--line);background:#fcfdfb}
