@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_base_url: str = "https://openrouter.ai/api/v1"
     openai_model: str = "gpt-4.1-mini"
+    vision_model: str = "openai/gpt-4o-mini"
     moderation_model: str = "omni-moderation-latest"
     session_hours: int = Field(default=12, ge=1, le=72)
     retention_days: int = Field(default=30, ge=1, le=365)

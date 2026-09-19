@@ -101,9 +101,13 @@ class AI:
             out.append({"role": "user", "content": latest or "שלום"})
         return out
 
+    def _model_for(self, context):
+        has_image = any(row.get("image") for row in (context.get("messages") or []))
+        return settings().vision_model if has_image else settings().openai_model
+
     def _llm_reply(self, context):
         messages = self._messages(context)
-        data = self.request("chat/completions", {"model": settings().openai_model, "temperature": 0.9, "max_tokens": 400, "messages": messages})
+        data = self.request("chat/completions", {"model": self._model_for(context), "temperature": 0.9, "max_tokens": 400, "messages": messages})
         reply = (data["choices"][0]["message"]["content"] or "").strip()
         if not reply:
             raise AIUnavailable("empty_reply")
@@ -115,7 +119,7 @@ class AI:
         try:
             data = self.request(
                 "chat/completions",
-                {"model": settings().openai_model, "temperature": 0.9, "max_tokens": 400, "n": 2, "messages": messages},
+                {"model": self._model_for(context), "temperature": 0.9, "max_tokens": 400, "n": 2, "messages": messages},
             )
             for choice in data.get("choices") or []:
                 text = (choice.get("message", {}).get("content") or "").strip()
@@ -127,7 +131,7 @@ class AI:
             try:
                 data = self.request(
                     "chat/completions",
-                    {"model": settings().openai_model, "temperature": 0.5, "max_tokens": 400, "messages": messages},
+                    {"model": self._model_for(context), "temperature": 0.5, "max_tokens": 400, "messages": messages},
                 )
                 text = (data.get("choices", [{}])[0].get("message", {}).get("content") or "").strip()
                 if text and text not in replies:
