@@ -28,7 +28,7 @@ function toast(msg) {
   }
   function updateStories() {
     var now = Date.now() / 1000;
-    document.querySelectorAll('.story').forEach(function (s) {
+    document.querySelectorAll('.waiting-item').forEach(function (s) {
       var ring = s.querySelector('.story-ring');
       var state = s.getAttribute('data-state');
       if (!ring || !state) return;

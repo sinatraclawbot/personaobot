@@ -720,6 +720,7 @@ def persona_page(pid: str, request: Request, cid: str = "", error: str = "", use
             "unanswered": 1 if unanswered else 0,
             "last_incoming": c.last_incoming,
         })
+    stories = [s for s in stories if s["unanswered"] and s["state"] != "blocked"]
     return render(
         request,
         "persona.html",
