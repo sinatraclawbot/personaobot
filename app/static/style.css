@@ -2,9 +2,16 @@
 
 .filters{display:flex;gap:10px;margin-bottom:16px}.filters select{margin:0;max-width:220px}
 .status-explain{display:block;white-space:normal;max-width:280px;font-size:11px;color:var(--muted);margin-top:4px;line-height:1.4}
-.thumbgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}.msg-media{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;max-width:340px}.msg-media img,.msg-media video{max-width:100%;max-height:320px;border-radius:10px;display:block;border:1px solid var(--line)}
+.gallery-icons{display:flex;flex-wrap:wrap;gap:8px}
+.gallery-icon{position:relative;width:48px;height:48px;padding:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#eef0ea;cursor:pointer}
+.gallery-icon img,.gallery-icon video{width:100%;height:100%;object-fit:cover;display:block}
+.gallery-icon .vid-badge{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;background:rgba(0,0,0,.25)}
+.gallery-icon.copied{outline:2px solid var(--green);outline-offset:1px}
+.thumbgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}.thumbgrid img,.thumbgrid video{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:7px;background:#eef0ea;border:1px solid var(--line)}
+.attach.has-file{background:#eaf1e6;border-color:var(--green)}
+.attach.has-file span{color:var(--green)}.msg-media{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;max-width:340px}.msg-media img,.msg-media video{max-width:100%;max-height:320px;border-radius:10px;display:block;border:1px solid var(--line)}
 .about-text{margin-top:10px}
-.story-row{display:flex;gap:16px;overflow-x:auto;padding:6px 2px 16px;margin-bottom:6px}
+.story-row{position:sticky;top:0;z-index:8;background:var(--bg);display:flex;gap:16px;overflow-x:auto;padding:6px 2px 16px;margin-bottom:6px}
 .story{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:72px}
 .story-ring{width:58px;height:58px;border-radius:50%;padding:3px;background:#9bb77f}
 .stage-active{background:#4c9a52}

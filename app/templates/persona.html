@@ -37,7 +37,7 @@
   </div>
   <aside>
     <section class="panel form-panel"><div class="eyebrow">ABOUT</div><h3>{{ profile.name }}</h3><span class="badge">{{ config.get('chat_language') or config.get('languages', '') }}</span><p class="fine preserve about-text">{{ config.get('personality') or '—' }}</p></section>
-    <section class="panel form-panel"><h2>Gallery</h2><div class="thumbgrid">{% for item in media %}{% if item.kind == 'photo' %}<img src="{{ item.url }}" alt="">{% else %}<video src="{{ item.url }}" muted playsinline></video>{% endif %}{% else %}<p class="muted">No media yet.</p>{% endfor %}</div></section>
+    <section class="panel form-panel"><h2>Gallery</h2><div class="gallery-icons">{% for item in media %}<button type="button" class="gallery-icon" data-copy="{{ item.url }}" data-kind="{{ item.kind }}" title="{% if item.kind == 'photo' %}Click to copy photo{% else %}Click to copy link{% endif %}">{% if item.kind == 'photo' %}<img src="{{ item.url }}" alt="">{% else %}<video src="{{ item.url }}" muted playsinline></video><span class="vid-badge">▶</span>{% endif %}</button>{% else %}<p class="muted">No media yet.</p>{% endfor %}</div></section>
   </aside>
 </div>
 {% endblock %}
