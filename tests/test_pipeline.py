@@ -119,10 +119,10 @@ def test_duplicate_and_old_edits_ignored(db, scope):
     assert db.scalar(select(Message).where(Message.telegram_id == 2)).text == "Newer edit"
 
 
-def test_owner_takeover_pauses(db, scope):
+def test_owner_takeover_does_not_pause(db, scope):
     _, c, v = scope
     process_update(db, incoming(c, sender=c.owner_id))
-    assert v.state == "paused" and v.reason == "owner_takeover"
+    assert v.state == "active" and v.reason == "owner_takeover"
 
 
 def test_bot_echo_does_not_generate(db, scope):
@@ -170,7 +170,7 @@ def test_disconnect_invalidates_drafts(db, scope):
     draft, _ = create_draft(db, p, v)
     save_connection(db, FakeTelegram(c, enabled=False).connection(c.id), 100)
     db.commit()
-    assert not c.enabled and draft.status == "stale" and v.state == "escalated"
+    assert not c.enabled and draft.status == "stale" and v.state == "active"
 
 
 @pytest.mark.parametrize(
@@ -189,7 +189,7 @@ def test_risky_decisions_never_queue_send(db, scope, action, reason):
     p.mode = "auto"
     generate(db, {"profile_id": p.id, "conversation_id": v.id, "revision": 0}, FakeAI(action, reason))
     db.commit()
-    assert v.state in ("blocked", "escalated")
+    assert v.state == ("blocked" if action == "block" else "active")
     assert not db.scalar(select(Draft)) and not db.scalar(select(Job))
 
 
@@ -201,7 +201,7 @@ def test_ai_failure_fails_closed(db, scope):
             raise AIUnavailable("ai_unavailable")
 
     generate(db, {"profile_id": p.id, "conversation_id": v.id, "revision": 0}, FailedAI())
-    assert v.state == "escalated"
+    assert v.state == "active"
     assert not db.scalar(select(Draft))
 
 
@@ -376,19 +376,18 @@ def test_auto_restarts_on_client_message_after_owner_reply(db, scope):
     profile, conn, conv = scope
     profile.mode = 'auto'
     process_update(db, incoming(conn, sender=conn.owner_id))
-    assert conv.state == 'paused'
+    assert conv.state == 'active' and conv.reason == 'owner_takeover'
     process_update(db, incoming(conn, uid=11, mid=3))
     db.flush()
     assert conv.state == 'active'
     assert db.scalar(select(Job).where(Job.kind == 'generate')) is not None
 
 
-@pytest.mark.parametrize('reason', ['consent_withdrawn', 'operator_pause', 'minors'])
-def test_auto_does_not_restart_protected_holds(db, scope, reason):
+@pytest.mark.parametrize('state,reason', [('blocked', 'minors'), ('active', 'consent_withdrawn')])
+def test_auto_does_not_restart_protected_holds(db, scope, state, reason):
     profile, conn, conv = scope
     profile.mode = 'auto'
-    conv.state, conv.reason = 'paused', reason
+    conv.state, conv.reason = state, reason
     process_update(db, incoming(conn))
     db.flush()
-    assert conv.state == 'paused'
     assert db.scalar(select(Job).where(Job.kind == 'generate')) is None

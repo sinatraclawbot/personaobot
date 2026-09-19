@@ -60,7 +60,8 @@ def invalidate(db, conv, reason):
 
 def hold(db, conv, reason, blocked=False):
     invalidate(db, conv, reason)
-    conv.state = "blocked" if blocked else "escalated"
+    if blocked:
+        conv.state = "blocked"
     conv.reason = reason
     audit(db, "system", "conversation_" + conv.state, conv.id, conv.profile_id)
 
@@ -230,7 +231,7 @@ def process_update(db, payload, telegram=None):
     if kind == "edited_business_message":
         db.query(Memory).filter_by(profile_id=profile_id, conversation_id=conv.id).delete()
     if is_owner:
-        conv.state, conv.reason = "paused", "owner_takeover"
+        conv.reason = "owner_takeover"
         return
     # Edits do not extend Telegram's 24-hour incoming-message window.
     conv.last_incoming = max(conv.last_incoming, msg.created)
@@ -247,11 +248,9 @@ def process_update(db, payload, telegram=None):
     if risk:
         hold(db, conv, risk, blocked=True)
         return
-    # Owner messages cancel stale replies; the next client message can restart Auto mode.
-    profile = db.get(Profile, profile_id)
-    if conv.reason == "owner_takeover" and conv.state == "paused" and profile.mode == "auto":
-        conv.state, conv.reason = "active", "client_returned"
-    if conv.state == "active":
+    if conv.reason == "owner_takeover":
+        conv.reason = "client_returned"
+    if conv.reason != "consent_withdrawn" and conv.state != "blocked":
         enqueue(
             db,
             "generate",
@@ -322,7 +321,7 @@ def scope(db, payload):
 def eligibility(profile, conv, connection):
     if not profile.enabled or not profile.lawful_reviewed:
         return "profile_not_enabled_or_reviewed"
-    if conv.state != "active":
+    if conv.state == "blocked":
         return "conversation_not_active"
     if (
         not connection
@@ -338,7 +337,7 @@ def eligibility(profile, conv, connection):
 
 def generate(db, payload, ai=None):
     profile, conv = scope(db, payload)
-    if conv.revision != payload["revision"] or conv.state != "active":
+    if conv.revision != payload["revision"] or conv.state == "blocked" or conv.reason == "consent_withdrawn":
         return
     reason = eligibility(profile, conv, db.get(Connection, conv.connection_id))
     if reason:
