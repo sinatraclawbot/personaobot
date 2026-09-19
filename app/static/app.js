@@ -8,6 +8,15 @@ document.querySelectorAll('form').forEach(form => {
   });
 });
 
+function toast(msg) {
+  var t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  window.setTimeout(function () { t.classList.add('show'); }, 10);
+  window.setTimeout(function () { t.classList.remove('show'); window.setTimeout(function () { t.remove(); }, 300); }, 2200);
+}
+
 // Conversation story bubbles: 5 stage colors + "awaiting reply" blink that speeds up each minute.
 (function () {
   function blinkClass(mins) {
@@ -40,15 +49,16 @@ document.querySelectorAll('form').forEach(form => {
   setInterval(updateStories, 10000);
 })();
 
-// Gallery icons: clicking attaches the actual media file (photo or video) to the reply.
+// Gallery icons: clicking copies the actual media file into the reply and confirms with text.
 document.querySelectorAll('.gallery-icon').forEach(function (btn) {
   btn.addEventListener('click', async function () {
     var url = btn.getAttribute('data-copy');
     var form = document.querySelector('.chat-composer');
     var input = form && form.querySelector('input[name=file]');
-    if (!input) return;
+    if (!input) { toast('Open a conversation first'); return; }
     try {
-      var resp = await fetch(url);
+      var resp = await fetch(url, { credentials: 'same-origin' });
+      if (!resp.ok) throw new Error('status ' + resp.status);
       var blob = await resp.blob();
       var ext = (url.split('?')[0].split('.').pop() || 'bin').toLowerCase();
       var name = 'media.' + ext;
@@ -58,9 +68,14 @@ document.querySelectorAll('.gallery-icon').forEach(function (btn) {
       var attach = form.querySelector('.attach');
       attach.classList.add('has-file');
       attach.title = 'Attached: ' + name;
+      var label = form.querySelector('.attach-name');
+      if (label) label.textContent = '✓ ' + name;
       btn.classList.add('copied');
-      setTimeout(function () { btn.classList.remove('copied'); }, 1200);
-    } catch (e) {}
+      toast('Media copied — press Send to send it');
+      window.setTimeout(function () { btn.classList.remove('copied'); }, 1200);
+    } catch (e) {
+      toast('Could not attach media');
+    }
   });
 });
 

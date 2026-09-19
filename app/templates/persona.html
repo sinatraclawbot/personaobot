@@ -27,7 +27,7 @@
         <input type="hidden" name="csrf" value="{{ csrf }}">
         <input type="hidden" name="next" value="/p/{{ profile.id }}?cid={{ conv.id }}">
         <textarea name="text" rows="1" maxlength="3500" placeholder="Type a reply…"></textarea>
-        <label class="attach" title="Attach photo or video"><input type="file" name="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/x-m4v"><span>📎</span></label>
+        <label class="attach" title="Attach photo or video"><input type="file" name="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/x-m4v"><span>📎</span></label><span class="attach-name"></span>
         <button class="primary">Send</button>
       </form>
     </section>
