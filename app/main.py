@@ -443,6 +443,9 @@ async def manual_reply(pid: str, cid: str, request: Request, user=Depends(requir
         raise HTTPException(409, reason)
     form = await request.form()
     value = str(form.get("text", "")).strip()
+    next_url = str(form.get("next", ""))
+    if not (next_url.startswith("/p/") or next_url.startswith("/profiles/")):
+        next_url = f"/profiles/{pid}/conversations/{cid}"
     upload = form.get("file")
     media = []
     if upload is not None and getattr(upload, "filename", ""):
@@ -474,7 +477,7 @@ async def manual_reply(pid: str, cid: str, request: Request, user=Depends(requir
     )
     audit(db, user.id, "manual_reply_queued", draft.id, pid)
     db.commit()
-    return redirect(f"/profiles/{pid}/conversations/{cid}")
+    return redirect(next_url)
 
 
 @app.post("/profiles/{pid}/conversations/{cid}/memory")
@@ -671,27 +674,35 @@ def chat_media(pid, name, user=Depends(require_user), db=Depends(session)):
 
 
 @app.get("/p/{pid}", response_class=HTMLResponse)
-def public_profile(pid: str, request: Request, db=Depends(session)):
-    from .media import list_files
-    profile = db.get(Profile, pid)
-    if not profile or not profile.enabled or not profile.lawful_reviewed:
-        raise HTTPException(404, "Not found")
+def persona_page(pid: str, request: Request, cid: str = "", user=Depends(require_user), db=Depends(session)):
+    profile = profile_access(db, user, pid)
+    conversations = list(
+        db.scalars(
+            select(Conversation)
+            .where(Conversation.profile_id == pid)
+            .order_by(Conversation.updated.desc())
+        )
+    )
+    conv, messages, connection = None, [], None
+    if conversations:
+        selected = cid or conversations[0].id
+        conv = next((c for c in conversations if c.id == selected), conversations[0])
+        messages = list(
+            db.scalars(
+                select(Message)
+                .where(Message.profile_id == pid, Message.conversation_id == conv.id)
+                .order_by(Message.created.desc(), Message.telegram_id.desc())
+                .limit(100)
+            )
+        )
+        messages = list(reversed(messages))
+        connection = db.get(Connection, conv.connection_id)
     return render(
         request,
-        "public_card.html",
+        "persona.html",
         profile=profile,
-        config=ProfileConfig(**profile.config).model_dump(),
-        media=list_files(pid),
+        conversations=conversations,
+        conv=conv,
+        messages=messages,
+        connection=connection,
     )
-
-
-@app.get("/p/{pid}/media/{name}")
-def public_media(pid: str, name: str, db=Depends(session)):
-    from .media import resolve
-    profile = db.get(Profile, pid)
-    if not profile or not profile.enabled or not profile.lawful_reviewed:
-        raise HTTPException(404, "Not found")
-    path = resolve(pid, name)
-    if path is None:
-        raise HTTPException(404, "Not found")
-    return FileResponse(path)
