@@ -147,3 +147,12 @@ document.querySelectorAll('.suggest-use').forEach(function (btn) {
     if (ta && suggestions[idx]) { ta.value = suggestions[idx]; ta.focus(); }
   });
 });
+
+// Auto-scroll the conversation transcript to the latest message on load.
+function scrollTranscriptToBottom() {
+  document.querySelectorAll('.chat .transcript').forEach(function (el) {
+    el.scrollTop = el.scrollHeight;
+  });
+}
+scrollTranscriptToBottom();
+window.addEventListener('load', scrollTranscriptToBottom);
