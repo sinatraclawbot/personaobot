@@ -2,7 +2,6 @@ import hashlib
 import time
 import re
 from sqlalchemy import func, select, update
-from .config import settings
 from .models import Audit, Connection, Conversation, Draft, Job, Memory, Message, Profile, Membership, User
 from .ai import AI, AIUnavailable, local_risk
 from .telegram import Telegram, TelegramError
@@ -339,7 +338,7 @@ def eligibility(profile, conv, connection):
 
 def process_whatsapp(db, data):
     """Route an inbound WhatsApp message into a profile conversation and queue a reply."""
-    pid = settings().whatsapp_profile_id
+    pid = str(data.get("profile_id") or "")
     if not pid:
         return
     phone = str(data.get("chat_id") or "").strip()
@@ -348,23 +347,24 @@ def process_whatsapp(db, data):
     profile = db.get(Profile, pid)
     if not profile:
         return
-    conn = db.scalar(select(Connection).where(Connection.id == "whatsapp", Connection.profile_id == pid))
+    cid = "whatsapp:" + pid
+    conn = db.scalar(select(Connection).where(Connection.id == cid, Connection.profile_id == pid))
     if not conn:
-        conn = Connection(id="whatsapp", profile_id=pid, owner_id=0, user_chat_id=0, enabled=True, rights={"can_reply": True})
+        conn = Connection(id=cid, profile_id=pid, owner_id=0, user_chat_id=0, enabled=True, rights={"can_reply": True})
         db.add(conn)
         db.flush()
     chat_hash = int(hashlib.sha1(phone.encode()).hexdigest()[:15], 16)
     conv = db.scalar(
         select(Conversation).where(
             Conversation.profile_id == pid,
-            Conversation.connection_id == "whatsapp",
+            Conversation.connection_id == cid,
             Conversation.chat_id == chat_hash,
         )
     )
     if not conv:
         conv = Conversation(
             profile_id=pid,
-            connection_id="whatsapp",
+            connection_id=cid,
             chat_id=chat_hash,
             channel="whatsapp",
             whatsapp_chat_id=phone,
@@ -380,7 +380,7 @@ def process_whatsapp(db, data):
     conv.last_incoming = max(conv.last_incoming, float(data.get("timestamp") or time.time()))
     invalidate(db, conv, "source_changed")
     if conv.state != "blocked" and conv.reason != "consent_withdrawn":
-        enqueue(db, "generate", f"generate:{conv.id}:{conv.revision}", "whatsapp", {"profile_id": pid, "conversation_id": conv.id, "revision": conv.revision})
+        enqueue(db, "generate", f"generate:{conv.id}:{conv.revision}", cid, {"profile_id": pid, "conversation_id": conv.id, "revision": conv.revision})
     db.commit()
 
 
@@ -404,7 +404,7 @@ def _send_whatsapp(db, profile, conv, draft, ai=None):
     draft.status = "sending"
     db.commit()
     from .whatsapp import send_text
-    if not send_text(conv.whatsapp_chat_id, draft.text):
+    if not send_text(profile.id, conv.whatsapp_chat_id, draft.text):
         draft.status = "queued"
         db.commit()
         raise RetryJob("whatsapp_send_unavailable", 10)

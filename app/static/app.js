@@ -281,3 +281,43 @@ document.addEventListener('submit', function (e) {
     .catch(function () { toast('Could not send'); })
     .then(function () { delete form.dataset.sending; form.removeAttribute('aria-busy'); });
 });
+
+// WhatsApp connect (profile settings): QR login flow.
+function waPid(btn) { return btn.closest('.wa-connect').getAttribute('data-pid'); }
+function waPollQr(box, pid) {
+  fetch('/whatsapp/qr/' + pid, { credentials: 'same-origin' })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (d.status === 'ready') {
+        box.innerHTML = '<p class="muted fine">Connected! Reloading…</p>';
+        setTimeout(function () { window.location.reload(); }, 800);
+        return;
+      }
+      if (d.qr) {
+        box.innerHTML = '<p class="fine">Scan with WhatsApp on your phone:</p><img src="' + d.qr + '" alt="QR code">';
+      } else if (d.status === 'error' || d.status === 'none') {
+        box.innerHTML = '<p class="muted fine">Could not reach the WhatsApp bridge. Try again.</p>';
+        return;
+      }
+      setTimeout(function () { waPollQr(box, pid); }, 3000);
+    })
+    .catch(function () { box.innerHTML = '<p class="muted fine">Could not reach the WhatsApp bridge.</p>'; });
+}
+document.querySelectorAll('.wa-btn[data-action="connect"]').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var pid = waPid(btn);
+    var box = btn.closest('.wa-connect').querySelector('.wa-qr-box');
+    box.hidden = false;
+    box.innerHTML = '<p class="muted fine">Opening WhatsApp login…</p>';
+    fetch('/whatsapp/connect/' + pid, { method: 'POST', credentials: 'same-origin' })
+      .then(function () { waPollQr(box, pid); })
+      .catch(function () { box.innerHTML = '<p class="muted fine">Could not start the connection.</p>'; });
+  });
+});
+document.querySelectorAll('.wa-btn[data-action="disconnect"]').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var pid = waPid(btn);
+    fetch('/whatsapp/disconnect/' + pid, { method: 'POST', credentials: 'same-origin' })
+      .then(function () { window.location.reload(); });
+  });
+});

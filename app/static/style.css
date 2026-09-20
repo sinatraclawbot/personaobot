@@ -53,6 +53,11 @@
 .conv-name{font-weight:600;font-size:13px;color:#263c33;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .conv-time{font-size:10px;color:#98a08f;white-space:nowrap}
 .conv-preview{font-size:11px;color:#788078;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;margin-top:2px}
+.wa-connect{margin:14px 0}
+.wa-connect .eyebrow{margin-bottom:6px}
+.wa-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.wa-qr-box{margin-top:12px}
+.wa-qr-box img{width:200px;height:200px;border-radius:10px;border:1px solid var(--line)}
 .wait-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#e0a100;margin-left:5px;vertical-align:middle}
 @media(max-width:900px){.persona-layout{grid-template-columns:1fr}}
 .chat-blocked{padding:18px 22px}

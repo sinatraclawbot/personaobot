@@ -58,6 +58,8 @@ class Profile(Base):
     lawful_reviewed = Column(Boolean, nullable=False, default=False)
     config = Column(JSON, nullable=False, default=dict)
     version = Column(Integer, nullable=False, default=1)
+    whatsapp_status = Column(String(16), nullable=False, default="")
+    whatsapp_phone = Column(String(64), nullable=False, default="")
     created = Column(Float, nullable=False, default=time.time)
     __table_args__ = (CheckConstraint("mode in ('auto','approval','human')"),)
 

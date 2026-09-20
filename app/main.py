@@ -774,14 +774,38 @@ def suggest_reply(pid: str, cid: str, user=Depends(require_user), db=Depends(ses
     return JSONResponse({"suggestions": suggestions})
 
 
-@app.get("/whatsapp/qr", response_class=HTMLResponse)
-def whatsapp_qr(user=Depends(require_user)):
-    import os
-    from pathlib import Path
-    path = Path(os.environ.get("WHATSAPP_DATA_DIR", "/var/data/whatsapp")) / "qr.txt"
-    if not path.exists():
-        return HTMLResponse('<html><body><h2>WhatsApp is connected — no QR needed.</h2></body></html>')
-    return HTMLResponse('<html><body><h2>Scan with WhatsApp on your phone</h2><img src="' + path.read_text().strip() + '"></body></html>')
+@app.post("/whatsapp/connect/{pid}")
+def whatsapp_connect(pid: str, user=Depends(require_user), db=Depends(session)):
+    from .whatsapp import connect
+    profile = profile_access(db, user, pid)
+    connect(pid)
+    profile.whatsapp_status = "pending"
+    db.commit()
+    return redirect(f"/profiles/{pid}")
+
+
+@app.post("/whatsapp/disconnect/{pid}")
+def whatsapp_disconnect(pid: str, user=Depends(require_user), db=Depends(session)):
+    from .whatsapp import disconnect
+    profile = profile_access(db, user, pid)
+    disconnect(pid)
+    profile.whatsapp_status = ""
+    profile.whatsapp_phone = ""
+    db.commit()
+    return redirect(f"/profiles/{pid}")
+
+
+@app.get("/whatsapp/qr/{pid}")
+def whatsapp_qr(pid: str, user=Depends(require_user), db=Depends(session)):
+    from .whatsapp import qr as _qr
+    profile = profile_access(db, user, pid)
+    res = _qr(pid)
+    if res.get("status") == "ready":
+        profile.whatsapp_status = "ready"
+        if res.get("phone"):
+            profile.whatsapp_phone = res["phone"]
+        db.commit()
+    return JSONResponse(res)
 
 
 @app.post("/webhooks/whatsapp")

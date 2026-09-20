@@ -1,5 +1,6 @@
-// WhatsApp Web sidecar: logs into web.whatsapp.com with a persistent session,
-// relays incoming messages to the Python app, and sends outgoing messages it is asked to send.
+// WhatsApp Web sidecar (multi-account): one persistent session per profile id.
+// Logs into web.whatsapp.com, relays incoming messages to the Python app,
+// and sends outgoing messages. Exposes a small HTTP API for the app to drive it.
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const QRCode = require('qrcode');
 const http = require('http');
@@ -10,92 +11,131 @@ const DATA_DIR = process.env.WHATSAPP_DATA_DIR || '/var/data/whatsapp';
 const BRIDGE_URL = process.env.WHATSAPP_BRIDGE_URL || 'http://localhost:8000';
 const SECRET = process.env.WHATSAPP_WEBHOOK_SECRET || '';
 const SEND_PORT = parseInt(process.env.WHATSAPP_SEND_PORT || '3001', 10);
+const CHROME = process.env.CHROME_PATH || '/usr/bin/chromium';
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
-const QR_FILE = path.join(DATA_DIR, 'qr.txt');
 
-let client;
+const clients = {}; // profileId -> { status, qr, phone, client }
 
-function startClient() {
-  client = new Client({
-    authStrategy: new LocalAuth({ dataPath: path.join(DATA_DIR, 'session') }),
+function buildClient(profileId) {
+  const entry = clients[profileId];
+  const dataPath = path.join(DATA_DIR, 'session-' + profileId);
+  fs.mkdirSync(dataPath, { recursive: true });
+
+  const client = new Client({
+    authStrategy: new LocalAuth({ dataPath }),
     puppeteer: {
-      executablePath: process.env.CHROME_PATH || '/usr/bin/chromium',
+      executablePath: CHROME,
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
     },
   });
 
   client.on('qr', async (qr) => {
-    try {
-      const dataUrl = await QRCode.toDataURL(qr);
-      fs.writeFileSync(QR_FILE, dataUrl);
-      console.log('qr_written');
-    } catch (e) {
-      console.error('qr_render_failed', e.message);
-    }
+    try { entry.qr = await QRCode.toDataURL(qr); entry.status = 'pending'; } catch (e) {}
   });
 
-  client.on('authenticated', () => {
-    try { fs.unlinkSync(QR_FILE); } catch (e) {}
+  client.on('ready', async () => {
+    entry.status = 'ready'; entry.qr = '';
+    try { const info = client.info; if (info && info.wid) entry.phone = String(info.wid.user || ''); } catch (e) {}
   });
 
-  client.on('ready', () => console.log('whatsapp_ready'));
+  client.on('message', (msg) => { if (!msg.fromMe) relay(profileId, msg); });
 
-  client.on('message', async (msg) => {
-    if (msg.fromMe) return;
-    try {
-      const payload = {
-        secret: SECRET,
-        chat_id: String(msg.from),
-        message_id: msg.id ? String(msg.id._serialized) : '',
-        text: msg.body || '',
-        type: msg.type || '',
-        has_media: !!msg.hasMedia,
-        timestamp: msg.timestamp || 0,
-      };
-      if (msg.hasMedia) {
-        try {
-          const media = await msg.downloadMedia();
-          if (media && media.data) payload.media = { mimetype: media.mimetype, data: media.data };
-        } catch (e) {}
-      }
-      await fetch(BRIDGE_URL + '/webhooks/whatsapp', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-    } catch (e) {
-      console.error('relay_failed', e.message);
-    }
-  });
+  client.on('disconnected', () => { entry.status = 'error'; });
 
-  client.on('disconnected', () => {
-    console.log('whatsapp_disconnected, restarting');
-    setTimeout(startClient, 3000);
-  });
-
-  client.initialize();
+  client.initialize().catch(() => { entry.status = 'error'; });
+  entry.client = client;
 }
 
-// Small HTTP server so the Python app can ask the sidecar to send messages.
-http.createServer(async (req, res) => {
-  res.setHeader('content-type', 'application/json');
-  if (req.method !== 'POST' || req.url !== '/send') { res.writeHead(404); res.end('{}'); return; }
-  let body = '';
-  req.on('data', (c) => { body += c; });
-  req.on('end', async () => {
-    try {
-      const data = JSON.parse(body);
-      const chat = await client.getChatById(String(data.chat_id));
-      await chat.sendMessage(data.text || '');
-      res.writeHead(200);
-      res.end(JSON.stringify({ ok: true }));
-    } catch (e) {
-      res.writeHead(500);
-      res.end(JSON.stringify({ ok: false, error: e.message }));
+async function relay(profileId, msg) {
+  try {
+    const payload = {
+      secret: SECRET,
+      profile_id: profileId,
+      chat_id: String(msg.from),
+      message_id: msg.id ? String(msg.id._serialized) : '',
+      text: msg.body || '',
+      type: msg.type || '',
+      has_media: !!msg.hasMedia,
+      timestamp: msg.timestamp || 0,
+    };
+    if (msg.hasMedia) {
+      try {
+        const media = await msg.downloadMedia();
+        if (media && media.data) payload.media = { mimetype: media.mimetype, data: media.data };
+      } catch (e) {}
     }
-  });
-}).listen(SEND_PORT, () => console.log('send_server_on_' + SEND_PORT));
+    await fetch(BRIDGE_URL + '/webhooks/whatsapp', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  } catch (e) {
+    console.error('relay_failed', e.message);
+  }
+}
 
-startClient();
+function ensure(profileId) {
+  if (!clients[profileId]) {
+    clients[profileId] = { status: 'starting', qr: '', phone: '', client: null };
+    buildClient(profileId);
+  }
+  return clients[profileId];
+}
+
+async function readBody(req) {
+  return new Promise((resolve) => {
+    let b = '';
+    req.on('data', (c) => { b += c; });
+    req.on('end', () => { try { resolve(JSON.parse(b || '{}')); } catch (e) { resolve({}); } });
+  });
+}
+
+function json(res, code, obj) {
+  res.writeHead(code, { 'content-type': 'application/json' });
+  res.end(JSON.stringify(obj));
+}
+
+http.createServer(async (req, res) => {
+  const url = (req.url || '').split('?')[0];
+  if (req.method === 'POST' && url === '/connect') {
+    const { profile_id } = await readBody(req);
+    if (!profile_id) return json(res, 400, { ok: false });
+    ensure(String(profile_id));
+    return json(res, 200, { ok: true });
+  }
+  if (req.method === 'POST' && url === '/disconnect') {
+    const { profile_id } = await readBody(req);
+    const pid = String(profile_id || '');
+    const e = clients[pid];
+    if (e && e.client) { try { await e.client.destroy(); } catch (err) {} }
+    delete clients[pid];
+    return json(res, 200, { ok: true });
+  }
+  if (req.method === 'GET' && url.startsWith('/qr/')) {
+    const pid = url.slice(4);
+    const e = clients[pid];
+    if (!e) return json(res, 200, { status: 'none' });
+    if (e.status === 'ready') return json(res, 200, { status: 'ready', phone: e.phone });
+    return json(res, 200, { status: e.status, qr: e.qr || '' });
+  }
+  if (req.method === 'GET' && url === '/status') {
+    const out = {};
+    for (const [pid, e] of Object.entries(clients)) out[pid] = { status: e.status, phone: e.phone };
+    return json(res, 200, { profiles: out });
+  }
+  if (req.method === 'POST' && url === '/send') {
+    const data = await readBody(req);
+    const e = clients[String(data.profile_id || '')];
+    if (!e || !e.client) return json(res, 500, { ok: false, error: 'not_connected' });
+    try {
+      const chat = await e.client.getChatById(String(data.chat_id));
+      await chat.sendMessage(data.text || '');
+      return json(res, 200, { ok: true });
+    } catch (err) {
+      return json(res, 500, { ok: false, error: err.message });
+    }
+  }
+  return json(res, 404, { ok: false });
+}).listen(SEND_PORT, () => console.log('whatsapp_sidecar_on_' + SEND_PORT));
