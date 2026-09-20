@@ -5,7 +5,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     nodejs npm chromium fonts-liberation \
     libnss3 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 libx11-xcb1 \
     && rm -rf /var/lib/apt/lists/*
-COPY requirements.txt whatsapp/package.json ./
+COPY requirements.txt ./
+COPY whatsapp/package.json whatsapp/package.json
 RUN pip install --no-cache-dir --require-hashes -r requirements.txt \
     && PUPPETEER_SKIP_DOWNLOAD=true npm install --prefix whatsapp \
     && useradd --uid 10001 --create-home platform
