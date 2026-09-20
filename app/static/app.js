@@ -274,5 +274,5 @@ document.addEventListener('submit', function (e) {
       }
     })
     .catch(function () { toast('Could not send'); })
-    .finally(function () { delete form.dataset.sending; form.removeAttribute('aria-busy'); });
+    .then(function () { delete form.dataset.sending; form.removeAttribute('aria-busy'); });
 });
