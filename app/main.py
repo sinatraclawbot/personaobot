@@ -774,6 +774,27 @@ def suggest_reply(pid: str, cid: str, user=Depends(require_user), db=Depends(ses
     return JSONResponse({"suggestions": suggestions})
 
 
+@app.get("/whatsapp/qr", response_class=HTMLResponse)
+def whatsapp_qr(user=Depends(require_user)):
+    import os
+    from pathlib import Path
+    path = Path(os.environ.get("WHATSAPP_DATA_DIR", "/var/data/whatsapp")) / "qr.txt"
+    if not path.exists():
+        return HTMLResponse('<html><body><h2>WhatsApp is connected — no QR needed.</h2></body></html>')
+    return HTMLResponse('<html><body><h2>Scan with WhatsApp on your phone</h2><img src="' + path.read_text().strip() + '"></body></html>')
+
+
+@app.post("/webhooks/whatsapp")
+async def whatsapp_webhook(request: Request):
+    if not settings().whatsapp_enabled:
+        raise HTTPException(404, "Not found")
+    data = await request.json()
+    if settings().whatsapp_webhook_secret and data.get("secret") != settings().whatsapp_webhook_secret:
+        raise HTTPException(403, "Invalid secret")
+    # Phase 2: route this into a profile/conversation and enqueue processing.
+    return JSONResponse({"ok": True})
+
+
 @app.get("/p/{pid}/chat/{cid}")
 def chat_fragment(pid: str, cid: str, request: Request, user=Depends(require_user), db=Depends(session)):
     profile = profile_access(db, user, pid)

@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     retention_days: int = Field(default=30, ge=1, le=365)
     job_max_attempts: int = Field(default=6, ge=1, le=20)
     worker_lease_seconds: int = Field(default=600, ge=300, le=3600)
+    whatsapp_enabled: bool = False
+    whatsapp_webhook_secret: str = ""
+    whatsapp_bridge_url: str = "http://localhost:3001"
 
     @model_validator(mode="after")
     def production(self):

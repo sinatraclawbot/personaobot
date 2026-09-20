@@ -1,0 +1,9 @@
+{
+  "name": "persona-whatsapp",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "whatsapp-web.js": "^1.26.0",
+    "qrcode": "^1.5.4"
+  }
+}
