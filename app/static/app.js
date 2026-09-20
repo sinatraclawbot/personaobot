@@ -293,6 +293,10 @@ function waPollQr(box, pid) {
         setTimeout(function () { window.location.reload(); }, 800);
         return;
       }
+      if (d.status === 'disabled') {
+        box.innerHTML = '<p class="muted fine">WhatsApp is off — set WHATSAPP_ENABLED=true in Render, redeploy, then retry.</p>';
+        return;
+      }
       if (d.qr) {
         box.innerHTML = '<p class="fine">Scan with WhatsApp on your phone:</p><img src="' + d.qr + '" alt="QR code">';
       } else if (d.status === 'error' || d.status === 'none') {

@@ -39,7 +39,7 @@ def disconnect(profile_id):
 def qr(profile_id):
     """Fetch this profile's QR code (data URL) or ready state from the sidecar."""
     if not settings().whatsapp_enabled:
-        return {"status": "none", "qr": ""}
+        return {"status": "disabled", "qr": ""}
     try:
         r = httpx.get(_bridge() + "/qr/" + str(profile_id), timeout=20)
         r.raise_for_status()
