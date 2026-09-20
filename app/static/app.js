@@ -203,7 +203,7 @@ window.addEventListener('popstate', function () {
 });
 
 // Fast send: submit the reply via AJAX (no page reload) and update the chat in place.
-function appendOutgoing(text, file) {
+function appendOutgoing(text, media) {
   var transcript = document.querySelector('.chat .transcript');
   if (!transcript) return;
   var art = document.createElement('article');
@@ -215,20 +215,24 @@ function appendOutgoing(text, file) {
   if (text) {
     var b = document.createElement('div');
     b.className = 'bubble';
+    b.setAttribute('dir', 'auto');
     b.textContent = text;
     art.appendChild(b);
   }
-  if (file) {
+  if (media && media.length) {
     var box = document.createElement('div');
     box.className = 'msg-media';
-    var url = URL.createObjectURL(file);
-    if (file.type && file.type.indexOf('video/') === 0) {
-      var v = document.createElement('video'); v.src = url; v.controls = true; v.preload = 'metadata';
-      box.appendChild(v);
-    } else {
-      var im = document.createElement('img'); im.src = url;
-      box.appendChild(im);
-    }
+    var pid = (document.querySelector('.conv-list') || {}).getAttribute('data-pid');
+    media.forEach(function (item) {
+      var url = '/media/' + pid + '/chat/' + item.name;
+      if (item.kind === 'video') {
+        var v = document.createElement('video'); v.src = url; v.controls = true; v.preload = 'metadata';
+        box.appendChild(v);
+      } else {
+        var im = document.createElement('img'); im.src = url;
+        box.appendChild(im);
+      }
+    });
     art.appendChild(box);
   }
   transcript.appendChild(art);
@@ -261,8 +265,9 @@ document.addEventListener('submit', function (e) {
     .then(function (r) { if (!r.ok) throw 0; return r.json(); })
     .then(function (d) {
       if (d.ok) {
-        appendOutgoing(text, file);
-        updateSelectedListItem(text, !!file);
+        var media = d.media || [];
+        appendOutgoing(text, media);
+        updateSelectedListItem(text, media.length > 0);
         if (ta) ta.value = '';
         if (fileInput) fileInput.value = '';
         var attach = form.querySelector('.attach');

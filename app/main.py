@@ -449,7 +449,7 @@ async def manual_reply(pid: str, cid: str, request: Request, user=Depends(requir
     ajax = str(form.get("ajax", "")) == "1"
 
     def _done():
-        return JSONResponse({"ok": True}) if ajax else redirect(next_url)
+        return JSONResponse({"ok": True, "media": media}) if ajax else redirect(next_url)
 
     def _err(reason):
         if ajax:
