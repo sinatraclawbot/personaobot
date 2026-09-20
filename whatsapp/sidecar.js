@@ -35,10 +35,23 @@ fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const clients = {}; // profileId -> { status, qr, phone, client }
 
+function cleanSingletonLocks(dir) {
+  if (!fs.existsSync(dir)) return;
+  fs.readdirSync(dir).forEach(function (name) {
+    if (name === 'SingletonLock' || name === 'SingletonCookie' || name === 'SingletonSocket') {
+      try { fs.unlinkSync(path.join(dir, name)); } catch (e) {}
+      return;
+    }
+    const full = path.join(dir, name);
+    try { if (fs.statSync(full).isDirectory()) cleanSingletonLocks(full); } catch (e) {}
+  });
+}
+
 async function buildClient(profileId) {
   const entry = clients[profileId];
   const dataPath = path.join(DATA_DIR, 'session-' + profileId);
   fs.mkdirSync(dataPath, { recursive: true });
+  cleanSingletonLocks(dataPath);
   const px = await getProxy();
   const chromeArgs = [
     '--no-sandbox',
