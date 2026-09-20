@@ -4,7 +4,7 @@
   <div class="transcript">
     {% for msg in messages %}
     <article class="message {{ msg.direction }}"><div class="message-meta">{{ 'Client' if msg.direction in ['incoming','unsupported'] else 'Account owner' if msg.direction == 'owner' else 'Assistant' }} <span>{{ msg.created|date }}</span></div>
-    <div class="bubble">{{ '[Deleted]' if msg.deleted else (msg.text or ('[Unsupported message]' if not msg.media else '')) }}</div>
+    <div class="bubble" dir="auto">{{ '[Deleted]' if msg.deleted else (msg.text or ('[Unsupported message]' if not msg.media else '')) }}</div>
     {% if not msg.deleted and msg.media %}<div class="msg-media">{% for item in msg.media %}{% if item.kind == 'photo' %}<img src="/media/{{ profile.id }}/chat/{{ item.name }}" alt="">{% else %}<video src="/media/{{ profile.id }}/chat/{{ item.name }}" controls preload="metadata"></video>{% endif %}{% endfor %}</div>{% endif %}
     </article>
     {% else %}<p class="muted">No messages yet.</p>{% endfor %}
@@ -13,7 +13,7 @@
   <form class="chat-composer" method="post" action="/profiles/{{ profile.id }}/conversations/{{ conv.id }}/reply" enctype="multipart/form-data">
     <input type="hidden" name="csrf" value="{{ csrf }}">
     <input type="hidden" name="next" value="/p/{{ profile.id }}?cid={{ conv.id }}">
-    <textarea name="text" rows="1" maxlength="3500" placeholder="Type a reply…"></textarea>
+    <textarea name="text" rows="1" maxlength="3500" placeholder="Type a reply…" dir="auto"></textarea>
     <label class="attach" title="Attach photo or video"><input type="file" name="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/x-m4v"><span>📎</span></label><span class="attach-name"></span>
     <button class="primary">Send</button>
   </form>
