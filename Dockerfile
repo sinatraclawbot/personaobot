@@ -10,6 +10,7 @@ COPY whatsapp/package.json whatsapp/package.json
 RUN pip install --no-cache-dir --require-hashes -r requirements.txt \
     && npm install --prefix whatsapp \
     && useradd --uid 10001 --create-home platform
+RUN mkdir -p /home/platform/.cache && cp -R /root/.cache/puppeteer /home/platform/.cache/puppeteer && chown -R platform:platform /home/platform/.cache/puppeteer && chmod -R 755 /home/platform/.cache/puppeteer
 COPY --chown=platform:platform . .
 USER platform
 EXPOSE 8000
