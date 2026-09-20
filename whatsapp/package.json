@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "whatsapp-web.js": "^1.26.0",
-    "qrcode": "^1.5.4"
+    "qrcode": "^1.5.4",
+    "proxy-chain": "^2.0.0"
   }
 }

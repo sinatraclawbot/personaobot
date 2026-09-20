@@ -12,23 +12,42 @@ const BRIDGE_URL = process.env.WHATSAPP_BRIDGE_URL || 'http://localhost:8000';
 const SECRET = process.env.WHATSAPP_WEBHOOK_SECRET || '';
 const SEND_PORT = parseInt(process.env.WHATSAPP_SEND_PORT || '3001', 10);
 const CHROME = process.env.CHROME_PATH || '/usr/bin/chromium';
-const PROXY = process.env.WHATSAPP_PROXY || '';
+const PROXY_RAW = process.env.WHATSAPP_PROXY || '';
+
+let proxyUrl = null;
+function getProxy() {
+  if (proxyUrl !== null) return proxyUrl;
+  proxyUrl = (async () => {
+    if (!PROXY_RAW) return '';
+    try {
+      const proxyChain = require('proxy-chain');
+      const url = await proxyChain.anonymizeProxy(PROXY_RAW);
+      console.log('proxy_ready');
+      return url;
+    } catch (e) {
+      console.error('proxy_setup_failed', e && e.message);
+      return PROXY_RAW;
+    }
+  })();
+  return proxyUrl;
+}
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const clients = {}; // profileId -> { status, qr, phone, client }
 
-function buildClient(profileId) {
+async function buildClient(profileId) {
   const entry = clients[profileId];
   const dataPath = path.join(DATA_DIR, 'session-' + profileId);
   fs.mkdirSync(dataPath, { recursive: true });
+  const px = await getProxy();
 
   const client = new Client({
     authStrategy: new LocalAuth({ dataPath }),
     puppeteer: {
       executablePath: CHROME,
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'].concat(PROXY ? ['--proxy-server=' + PROXY] : []),
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'].concat(px ? ['--proxy-server=' + px] : []),
     },
   });
 
