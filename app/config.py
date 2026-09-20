@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     whatsapp_enabled: bool = False
     whatsapp_webhook_secret: str = ""
     whatsapp_bridge_url: str = "http://localhost:3001"
+    whatsapp_profile_id: str = ""
 
     @model_validator(mode="after")
     def production(self):

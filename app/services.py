@@ -1,6 +1,8 @@
+import hashlib
 import time
 import re
 from sqlalchemy import func, select, update
+from .config import settings
 from .models import Audit, Connection, Conversation, Draft, Job, Memory, Message, Profile, Membership, User
 from .ai import AI, AIUnavailable, local_risk
 from .telegram import Telegram, TelegramError
@@ -335,6 +337,94 @@ def eligibility(profile, conv, connection):
     return None
 
 
+def process_whatsapp(db, data):
+    """Route an inbound WhatsApp message into a profile conversation and queue a reply."""
+    pid = settings().whatsapp_profile_id
+    if not pid:
+        return
+    phone = str(data.get("chat_id") or "").strip()
+    if not phone:
+        return
+    profile = db.get(Profile, pid)
+    if not profile:
+        return
+    conn = db.scalar(select(Connection).where(Connection.id == "whatsapp", Connection.profile_id == pid))
+    if not conn:
+        conn = Connection(id="whatsapp", profile_id=pid, owner_id=0, user_chat_id=0, enabled=True, rights={"can_reply": True})
+        db.add(conn)
+        db.flush()
+    chat_hash = int(hashlib.sha1(phone.encode()).hexdigest()[:15], 16)
+    conv = db.scalar(
+        select(Conversation).where(
+            Conversation.profile_id == pid,
+            Conversation.connection_id == "whatsapp",
+            Conversation.chat_id == chat_hash,
+        )
+    )
+    if not conv:
+        conv = Conversation(
+            profile_id=pid,
+            connection_id="whatsapp",
+            chat_id=chat_hash,
+            channel="whatsapp",
+            whatsapp_chat_id=phone,
+            client_name=(phone.split("@")[0])[:200] or "WhatsApp",
+        )
+        db.add(conv)
+        db.flush()
+    text = str(data.get("text") or "")
+    mid = data.get("message_id") or f"{phone}:{data.get('timestamp') or time.time()}"
+    telegram_id = int(hashlib.sha1(str(mid).encode()).hexdigest()[:15], 16)
+    if not db.scalar(select(Message.id).where(Message.conversation_id == conv.id, Message.telegram_id == telegram_id)):
+        db.add(Message(profile_id=pid, conversation_id=conv.id, telegram_id=telegram_id, direction="incoming", text=text[:10000]))
+    conv.last_incoming = max(conv.last_incoming, float(data.get("timestamp") or time.time()))
+    invalidate(db, conv, "source_changed")
+    if conv.state != "blocked" and conv.reason != "consent_withdrawn":
+        enqueue(db, "generate", f"generate:{conv.id}:{conv.revision}", "whatsapp", {"profile_id": pid, "conversation_id": conv.id, "revision": conv.revision})
+    db.commit()
+
+
+def _send_whatsapp(db, profile, conv, draft, ai=None):
+    """Send a queued draft through the WhatsApp sidecar (text only for now)."""
+    ai = ai or AI()
+    reason = eligibility(profile, conv, db.get(Connection, conv.connection_id))
+    if reason:
+        draft.status, draft.reason = "blocked", reason
+        return
+    try:
+        decision = ai.decide(context_for(db, profile, conv), candidate=draft.text)
+    except AIUnavailable as exc:
+        draft.status, draft.reason = "blocked", str(exc)
+        hold(db, conv, str(exc))
+        return
+    if decision.action != "allow":
+        draft.status, draft.reason = "blocked", decision.reason
+        hold(db, conv, decision.reason, decision.action == "block")
+        return
+    draft.status = "sending"
+    db.commit()
+    from .whatsapp import send_text
+    if not send_text(conv.whatsapp_chat_id, draft.text):
+        draft.status = "queued"
+        db.commit()
+        raise RetryJob("whatsapp_send_unavailable", 10)
+    draft.status = "sent"
+    draft.telegram_id = int(hashlib.sha1(draft.id.encode()).hexdigest()[:15], 16)
+    conv.last_sent = time.time()
+    db.add(
+        Message(
+            profile_id=profile.id,
+            conversation_id=conv.id,
+            telegram_id=draft.telegram_id,
+            direction="outgoing",
+            text=draft.text,
+            media=list(draft.media or []),
+            created=time.time(),
+        )
+    )
+    audit(db, "system", "message_sent", draft.id, profile.id)
+
+
 def generate(db, payload, ai=None):
     profile, conv = scope(db, payload)
     if conv.revision != payload["revision"] or conv.state == "blocked" or conv.reason == "consent_withdrawn":
@@ -427,6 +517,8 @@ def send_draft(db, payload, telegram=None, ai=None):
         raise RetryJob("incoming_update_pending", 2)
     if conv.last_sent > time.time() - 3:
         raise RetryJob("chat_rate_limit", 3)
+    if conv.channel == "whatsapp":
+        return _send_whatsapp(db, profile, conv, draft, ai)
     telegram, ai = telegram or Telegram(), ai or AI()
     reason = eligibility(profile, conv, db.get(Connection, conv.connection_id))
     if reason:

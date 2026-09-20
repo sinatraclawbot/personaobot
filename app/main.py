@@ -785,13 +785,14 @@ def whatsapp_qr(user=Depends(require_user)):
 
 
 @app.post("/webhooks/whatsapp")
-async def whatsapp_webhook(request: Request):
+async def whatsapp_webhook(request: Request, db=Depends(session)):
+    from .services import process_whatsapp
     if not settings().whatsapp_enabled:
         raise HTTPException(404, "Not found")
     data = await request.json()
     if settings().whatsapp_webhook_secret and data.get("secret") != settings().whatsapp_webhook_secret:
         raise HTTPException(403, "Invalid secret")
-    # Phase 2: route this into a profile/conversation and enqueue processing.
+    process_whatsapp(db, data)
     return JSONResponse({"ok": True})
 
 

@@ -89,6 +89,8 @@ class Conversation(Base):
     profile_id = Column(ForeignKey("profiles.id"), nullable=False)
     connection_id = Column(String(256), nullable=False)
     chat_id = Column(BigInteger, nullable=False)
+    channel = Column(String(16), nullable=False, default="telegram")
+    whatsapp_chat_id = Column(String(128), nullable=True)
     client_name = Column(String(200), nullable=False, default="Client")
     state = Column(String(16), nullable=False, default="active")
     reason = Column(String(100), nullable=False, default="")

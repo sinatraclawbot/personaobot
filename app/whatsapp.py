@@ -6,9 +6,9 @@ log = logging.getLogger("platform.whatsapp")
 
 
 def send_text(chat_id, text):
-    """Send a text message through the WhatsApp Web sidecar (best effort)."""
+    """Send a text message through the WhatsApp Web sidecar. Returns True on success."""
     if not settings().whatsapp_enabled:
-        return
+        return False
     try:
         r = httpx.post(
             settings().whatsapp_bridge_url.rstrip("/") + "/send",
@@ -16,5 +16,7 @@ def send_text(chat_id, text):
             timeout=20,
         )
         r.raise_for_status()
+        return True
     except Exception as exc:
         log.warning("whatsapp_send_failed chat_id=%s err=%s", chat_id, exc)
+        return False
