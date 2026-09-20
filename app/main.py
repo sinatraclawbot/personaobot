@@ -446,8 +446,14 @@ async def manual_reply(pid: str, cid: str, request: Request, user=Depends(requir
     next_url = str(form.get("next", ""))
     if not (next_url.startswith("/p/") or next_url.startswith("/profiles/")):
         next_url = f"/profiles/{pid}/conversations/{cid}"
+    ajax = str(form.get("ajax", "")) == "1"
+
+    def _done():
+        return JSONResponse({"ok": True}) if ajax else redirect(next_url)
 
     def _err(reason):
+        if ajax:
+            return JSONResponse({"ok": False, "error": reason})
         return redirect(next_url + ("&" if "?" in next_url else "?") + "error=" + reason)
 
     reason = eligibility(profile, conv, db.get(Connection, conv.connection_id))
@@ -484,7 +490,7 @@ async def manual_reply(pid: str, cid: str, request: Request, user=Depends(requir
     )
     audit(db, user.id, "manual_reply_queued", draft.id, pid)
     db.commit()
-    return redirect(next_url)
+    return _done()
 
 
 @app.post("/profiles/{pid}/conversations/{cid}/memory")

@@ -201,3 +201,78 @@ window.addEventListener('popstate', function () {
   if (pid && cid) loadChat('/p/' + pid + '/chat/' + cid, null);
   else if (pid) window.location.reload();
 });
+
+// Fast send: submit the reply via AJAX (no page reload) and update the chat in place.
+function appendOutgoing(text, file) {
+  var transcript = document.querySelector('.chat .transcript');
+  if (!transcript) return;
+  var art = document.createElement('article');
+  art.className = 'message outgoing';
+  var meta = document.createElement('div');
+  meta.className = 'message-meta';
+  meta.textContent = 'Assistant · now';
+  art.appendChild(meta);
+  if (text) {
+    var b = document.createElement('div');
+    b.className = 'bubble';
+    b.textContent = text;
+    art.appendChild(b);
+  }
+  if (file) {
+    var box = document.createElement('div');
+    box.className = 'msg-media';
+    var url = URL.createObjectURL(file);
+    if (file.type && file.type.indexOf('video/') === 0) {
+      var v = document.createElement('video'); v.src = url; v.controls = true; v.preload = 'metadata';
+      box.appendChild(v);
+    } else {
+      var im = document.createElement('img'); im.src = url;
+      box.appendChild(im);
+    }
+    art.appendChild(box);
+  }
+  transcript.appendChild(art);
+}
+function updateSelectedListItem(text, hasFile) {
+  var item = document.querySelector('.conv-item.selected');
+  if (!item) return;
+  var preview = item.querySelector('.conv-preview');
+  var time = item.querySelector('.conv-time');
+  var dot = item.querySelector('.wait-dot');
+  if (preview) preview.textContent = hasFile ? '📎 Media' : (text || '');
+  if (time) time.textContent = 'now';
+  if (dot) dot.remove();
+}
+document.addEventListener('submit', function (e) {
+  var form = e.target;
+  if (!form || !form.matches || !form.matches('.chat-composer')) return;
+  e.preventDefault();
+  if (form.dataset.sending === 'yes') return;
+  var ta = form.querySelector('textarea');
+  var fileInput = form.querySelector('input[name=file]');
+  var text = ta ? ta.value.trim() : '';
+  var file = fileInput && fileInput.files && fileInput.files.length ? fileInput.files[0] : null;
+  if (!text && !file) { toast('Type a message or attach something'); return; }
+  form.dataset.sending = 'yes';
+  form.setAttribute('aria-busy', 'true');
+  var fd = new FormData(form);
+  fd.set('ajax', '1');
+  fetch(form.action, { method: 'POST', body: fd, credentials: 'same-origin' })
+    .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+    .then(function (d) {
+      if (d.ok) {
+        appendOutgoing(text, file);
+        updateSelectedListItem(text, !!file);
+        if (ta) ta.value = '';
+        if (fileInput) fileInput.value = '';
+        var attach = form.querySelector('.attach');
+        if (attach) { attach.classList.remove('has-file'); attach.title = 'Attach photo or video'; }
+        var an = form.querySelector('.attach-name'); if (an) an.textContent = '';
+        scrollTranscriptToBottom();
+      } else {
+        toast(d.error || 'Could not send');
+      }
+    })
+    .catch(function () { toast('Could not send'); })
+    .finally(function () { delete form.dataset.sending; form.removeAttribute('aria-busy'); });
+});
