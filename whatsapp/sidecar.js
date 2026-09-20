@@ -1,7 +1,7 @@
 // WhatsApp Web sidecar (multi-account): one persistent session per profile id.
 // Logs into web.whatsapp.com, relays incoming messages to the Python app,
 // and sends outgoing messages. Exposes a small HTTP API for the app to drive it.
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const QRCode = require('qrcode');
 const http = require('http');
 const fs = require('fs');
@@ -63,7 +63,10 @@ async function relay(profileId, msg) {
     if (msg.hasMedia) {
       try {
         const media = await msg.downloadMedia();
-        if (media && media.data) payload.media = { mimetype: media.mimetype, data: media.data };
+        if (media && media.data) {
+          const data = typeof media.data === 'string' ? media.data : Buffer.from(media.data).toString('base64');
+          payload.media = { mimetype: media.mimetype, data };
+        }
       } catch (e) {}
     }
     await fetch(BRIDGE_URL + '/webhooks/whatsapp', {
@@ -131,7 +134,14 @@ http.createServer(async (req, res) => {
     if (!e || !e.client) return json(res, 500, { ok: false, error: 'not_connected' });
     try {
       const chat = await e.client.getChatById(String(data.chat_id));
-      await chat.sendMessage(data.text || '');
+      const media = Array.isArray(data.media) ? data.media : [];
+      for (let i = 0; i < media.length; i++) {
+        const item = media[i];
+        const m = MessageMedia.fromFilePath(item.path);
+        const caption = (i === 0 && data.text) ? data.text : undefined;
+        await chat.sendMessage(m, { caption });
+      }
+      if (media.length === 0 && data.text) await chat.sendMessage(data.text);
       return json(res, 200, { ok: true });
     } catch (err) {
       return json(res, 500, { ok: false, error: err.message });

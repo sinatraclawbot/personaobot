@@ -21,9 +21,9 @@ def _post(path, payload):
         return None
 
 
-def send_text(profile_id, chat_id, text):
-    """Send a text message through the profile's WhatsApp session. Returns True on success."""
-    result = _post("/send", {"profile_id": str(profile_id), "chat_id": str(chat_id), "text": text})
+def send_message(profile_id, chat_id, text, media=None):
+    """Send a message (text and/or media) through the profile's WhatsApp session. Returns True on success."""
+    result = _post("/send", {"profile_id": str(profile_id), "chat_id": str(chat_id), "text": text or "", "media": media or []})
     return bool(result and result.get("ok"))
 
 

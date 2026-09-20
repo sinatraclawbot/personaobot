@@ -336,6 +336,29 @@ def eligibility(profile, conv, connection):
     return None
 
 
+_MIME_EXT = {
+    "image/jpeg": ".jpg", "image/jpg": ".jpg", "image/png": ".png", "image/webp": ".webp",
+    "video/mp4": ".mp4", "video/quicktime": ".mov",
+    "audio/ogg": ".ogg", "audio/opus": ".opus", "audio/mpeg": ".mp3",
+    "application/pdf": ".pdf", "text/plain": ".txt", "application/zip": ".zip",
+}
+
+
+def _ext_for_mime(mime):
+    m = (mime or "").lower()
+    if m in _MIME_EXT:
+        return _MIME_EXT[m]
+    sub = m.rsplit("/", 1)[-1] if "/" in m else m
+    for ext, subs in {
+        ".jpg": ("jpeg", "jpg"), ".png": ("png",), ".webp": ("webp",),
+        ".mp4": ("mp4",), ".mov": ("quicktime", "mov"), ".pdf": ("pdf",),
+        ".txt": ("plain", "txt"), ".mp3": ("mpeg", "mp3"), ".ogg": ("ogg",), ".opus": ("opus",),
+    }.items():
+        if sub in subs:
+            return ext
+    return None
+
+
 def process_whatsapp(db, data):
     """Route an inbound WhatsApp message into a profile conversation and queue a reply."""
     pid = str(data.get("profile_id") or "")
@@ -375,8 +398,19 @@ def process_whatsapp(db, data):
     text = str(data.get("text") or "")
     mid = data.get("message_id") or f"{phone}:{data.get('timestamp') or time.time()}"
     telegram_id = int(hashlib.sha1(str(mid).encode()).hexdigest()[:15], 16)
+    media_list = []
+    if data.get("media"):
+        try:
+            import base64 as b64
+            from .media import save_chat_media
+            ext = _ext_for_mime(data["media"].get("mimetype"))
+            raw = b64.b64decode(data["media"].get("data") or "")
+            if ext and raw:
+                media_list = [save_chat_media(pid, "wa" + ext, raw)]
+        except Exception:
+            media_list = []
     if not db.scalar(select(Message.id).where(Message.conversation_id == conv.id, Message.telegram_id == telegram_id)):
-        db.add(Message(profile_id=pid, conversation_id=conv.id, telegram_id=telegram_id, direction="incoming", text=text[:10000]))
+        db.add(Message(profile_id=pid, conversation_id=conv.id, telegram_id=telegram_id, direction="incoming", text=text[:10000], media=media_list))
     conv.last_incoming = max(conv.last_incoming, float(data.get("timestamp") or time.time()))
     invalidate(db, conv, "source_changed")
     if conv.state != "blocked" and conv.reason != "consent_withdrawn":
@@ -385,7 +419,7 @@ def process_whatsapp(db, data):
 
 
 def _send_whatsapp(db, profile, conv, draft, ai=None):
-    """Send a queued draft through the WhatsApp sidecar (text only for now)."""
+    """Send a queued draft through the WhatsApp sidecar (text and media)."""
     ai = ai or AI()
     reason = eligibility(profile, conv, db.get(Connection, conv.connection_id))
     if reason:
@@ -403,8 +437,14 @@ def _send_whatsapp(db, profile, conv, draft, ai=None):
         return
     draft.status = "sending"
     db.commit()
-    from .whatsapp import send_text
-    if not send_text(profile.id, conv.whatsapp_chat_id, draft.text):
+    from .whatsapp import send_message
+    from .media import resolve_chat
+    attachments = []
+    for item in draft.media or []:
+        path = resolve_chat(profile.id, str(item.get("name", "")))
+        if path:
+            attachments.append({"path": str(path), "kind": item.get("kind", "file")})
+    if not send_message(profile.id, conv.whatsapp_chat_id, draft.text, attachments):
         draft.status = "queued"
         db.commit()
         raise RetryJob("whatsapp_send_unavailable", 10)

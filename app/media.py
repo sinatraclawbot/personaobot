@@ -4,9 +4,20 @@ import re
 import uuid
 from pathlib import Path
 ROOT = Path(os.environ.get("MEDIA_ROOT", "/tmp/personaai-media"))
-ALLOWED = {".jpg", ".jpeg", ".png", ".webp", ".mp4", ".mov", ".m4v"}
+ALLOWED = {".jpg", ".jpeg", ".png", ".webp", ".mp4", ".mov", ".m4v",
+           ".pdf", ".txt", ".doc", ".docx", ".xls", ".xlsx", ".csv",
+           ".zip", ".m4a", ".mp3", ".opus", ".ogg", ".wav"}
 PHOTOS = {".jpg", ".jpeg", ".png", ".webp"}
 VIDEOS = {".mp4", ".mov", ".m4v"}
+
+
+def kind_for(suffix):
+    suffix = (suffix or "").lower()
+    if suffix in VIDEOS:
+        return "video"
+    if suffix in PHOTOS:
+        return "photo"
+    return "file"
 
 def folder(profile_id):
     path = ROOT / re.sub(r"[^a-zA-Z0-9_-]", "", profile_id)
@@ -17,7 +28,7 @@ def list_files(profile_id):
     rows = []
     for item in sorted(folder(profile_id).iterdir()):
         if item.is_file() and item.suffix.lower() in ALLOWED:
-            rows.append({"name": item.name, "kind": "video" if item.suffix.lower() in VIDEOS else "photo", "url": "/media/%s/%s" % (profile_id, item.name), "path": str(item)})
+            rows.append({"name": item.name, "kind": kind_for(item.suffix), "url": "/media/%s/%s" % (profile_id, item.name), "path": str(item)})
     return rows
 
 def save_upload(profile_id, filename, data):
@@ -63,7 +74,7 @@ def save_chat_media(profile_id, filename, data):
         raise ValueError("too_large")
     name = "m_" + uuid.uuid4().hex + suffix
     (chat_folder(profile_id) / name).write_bytes(data)
-    return {"name": name, "kind": "video" if suffix in VIDEOS else "photo"}
+    return {"name": name, "kind": kind_for(suffix)}
 
 
 def resolve_chat(profile_id, name):
