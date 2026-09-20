@@ -44,7 +44,7 @@ function buildClient(profileId) {
 
   client.on('disconnected', () => { entry.status = 'error'; });
 
-  client.initialize().catch(() => { entry.status = 'error'; });
+  client.initialize().catch((err) => { entry.status = 'error'; console.error('client_init_failed', err && err.message); });
   entry.client = client;
 }
 

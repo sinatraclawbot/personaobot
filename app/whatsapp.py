@@ -10,8 +10,6 @@ def _bridge():
 
 
 def _post(path, payload):
-    if not settings().whatsapp_enabled:
-        return None
     try:
         r = httpx.post(_bridge() + path, json=payload, timeout=20)
         r.raise_for_status()
@@ -38,8 +36,6 @@ def disconnect(profile_id):
 
 def qr(profile_id):
     """Fetch this profile's QR code (data URL) or ready state from the sidecar."""
-    if not settings().whatsapp_enabled:
-        return {"status": "disabled", "qr": ""}
     try:
         r = httpx.get(_bridge() + "/qr/" + str(profile_id), timeout=20)
         r.raise_for_status()
