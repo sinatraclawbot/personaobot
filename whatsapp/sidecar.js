@@ -12,6 +12,7 @@ const BRIDGE_URL = process.env.WHATSAPP_BRIDGE_URL || 'http://localhost:8000';
 const SECRET = process.env.WHATSAPP_WEBHOOK_SECRET || '';
 const SEND_PORT = parseInt(process.env.WHATSAPP_SEND_PORT || '3001', 10);
 const CHROME = process.env.CHROME_PATH || '/usr/bin/chromium';
+const PROXY = process.env.WHATSAPP_PROXY || '';
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
@@ -27,7 +28,7 @@ function buildClient(profileId) {
     puppeteer: {
       executablePath: CHROME,
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'].concat(PROXY ? ['--proxy-server=' + PROXY] : []),
     },
   });
 
