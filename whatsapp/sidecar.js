@@ -11,7 +11,6 @@ const DATA_DIR = process.env.WHATSAPP_DATA_DIR || '/var/data/whatsapp';
 const BRIDGE_URL = process.env.WHATSAPP_BRIDGE_URL || 'http://localhost:8000';
 const SECRET = process.env.WHATSAPP_WEBHOOK_SECRET || '';
 const SEND_PORT = parseInt(process.env.WHATSAPP_SEND_PORT || '3001', 10);
-const CHROME = process.env.CHROME_PATH || '/usr/bin/chromium';
 const PROXY_RAW = process.env.WHATSAPP_PROXY || '';
 
 let proxyUrl = null;
@@ -41,23 +40,18 @@ async function buildClient(profileId) {
   const dataPath = path.join(DATA_DIR, 'session-' + profileId);
   fs.mkdirSync(dataPath, { recursive: true });
   const px = await getProxy();
-  const userDataDir = path.join(DATA_DIR, 'chrome-' + profileId);
-  fs.mkdirSync(userDataDir, { recursive: true });
   const chromeArgs = [
-    '--headless=new',
     '--no-sandbox',
     '--disable-setuid-sandbox',
     '--disable-dev-shm-usage',
     '--disable-gpu',
     '--no-zygote',
-    '--user-data-dir=' + userDataDir,
   ];
   if (px) chromeArgs.push('--proxy-server=' + px);
 
   const client = new Client({
     authStrategy: new LocalAuth({ dataPath }),
     puppeteer: {
-      executablePath: CHROME,
       headless: true,
       args: chromeArgs,
     },
