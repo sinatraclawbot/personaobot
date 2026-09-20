@@ -11,6 +11,9 @@ RUN pip install --no-cache-dir --require-hashes -r requirements.txt \
     && npm install --prefix whatsapp \
     && useradd --uid 10001 --create-home platform
 RUN mkdir -p /home/platform/.cache && cp -R /root/.cache/puppeteer /home/platform/.cache/puppeteer && chown -R platform:platform /home/platform/.cache/puppeteer && chmod -R 755 /home/platform/.cache/puppeteer
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libcairo2 libpango-1.0-0 libatk1.0-0 libdbus-1-3 libexpat1 libfontconfig1 libglib2.0-0 libgtk-3-0 libnspr4 libx11-6 libxcb1 libxext6 libxdamage1 libxfixes3 \
+    && rm -rf /var/lib/apt/lists/*
 COPY --chown=platform:platform . .
 USER platform
 EXPOSE 8000
