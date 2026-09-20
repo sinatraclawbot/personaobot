@@ -41,13 +41,25 @@ async function buildClient(profileId) {
   const dataPath = path.join(DATA_DIR, 'session-' + profileId);
   fs.mkdirSync(dataPath, { recursive: true });
   const px = await getProxy();
+  const userDataDir = path.join(DATA_DIR, 'chrome-' + profileId);
+  fs.mkdirSync(userDataDir, { recursive: true });
+  const chromeArgs = [
+    '--headless=new',
+    '--no-sandbox',
+    '--disable-setuid-sandbox',
+    '--disable-dev-shm-usage',
+    '--disable-gpu',
+    '--no-zygote',
+    '--user-data-dir=' + userDataDir,
+  ];
+  if (px) chromeArgs.push('--proxy-server=' + px);
 
   const client = new Client({
     authStrategy: new LocalAuth({ dataPath }),
     puppeteer: {
       executablePath: CHROME,
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'].concat(px ? ['--proxy-server=' + px] : []),
+      args: chromeArgs,
     },
   });
 
