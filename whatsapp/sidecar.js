@@ -11,7 +11,7 @@ const DATA_DIR = process.env.WHATSAPP_DATA_DIR || '/var/data/whatsapp';
 const BRIDGE_URL = process.env.WHATSAPP_BRIDGE_URL || 'http://localhost:8000';
 const SECRET = process.env.WHATSAPP_WEBHOOK_SECRET || '';
 const SEND_PORT = parseInt(process.env.WHATSAPP_SEND_PORT || '3001', 10);
-const PROXY_RAW = process.env.WHATSAPP_PROXY || '';
+const PROXY_RAW = (process.env.WHATSAPP_PROXY || '').trim();
 
 let proxyUrl = null;
 function getProxy() {
