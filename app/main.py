@@ -759,6 +759,27 @@ def persona_page(pid: str, request: Request, cid: str = "", error: str = "", use
     )
 
 
+@app.get("/debug/whatsapp-network")
+async def debug_whatsapp_network():
+    import os
+    import httpx
+    out = {}
+    try:
+        out["egress_ip"] = httpx.get("https://api.ipify.org", timeout=15).text.strip()
+    except Exception as e:
+        out["egress_ip"] = "err:" + str(e)[:80]
+    proxy = os.environ.get("WHATSAPP_PROXY", "")
+    out["proxy_set"] = bool(proxy)
+    if proxy:
+        try:
+            r = httpx.get("https://api.ipify.org", proxy=proxy, timeout=25)
+            out["proxy_status"] = r.status_code
+            out["proxy_ip"] = r.text.strip()
+        except Exception as e:
+            out["proxy_status"] = "err:" + str(e)[:120]
+    return JSONResponse(out)
+
+
 @app.get("/p/{pid}/suggest")
 def suggest_reply(pid: str, cid: str, user=Depends(require_user), db=Depends(session)):
     from .ai import AI
