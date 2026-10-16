@@ -768,7 +768,7 @@ async def debug_whatsapp_network():
         out["egress_ip"] = httpx.get("https://api.ipify.org", timeout=15).text.strip()
     except Exception as e:
         out["egress_ip"] = "err:" + str(e)[:80]
-    proxy = os.environ.get("WHATSAPP_PROXY", "")
+    proxy = "".join((os.environ.get("WHATSAPP_PROXY", "") or "").split())
     out["proxy_set"] = bool(proxy)
     if proxy:
         try:
