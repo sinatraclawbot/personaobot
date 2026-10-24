@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     worker_lease_seconds: int = Field(default=600, ge=300, le=3600)
     whatsapp_enabled: bool = False
     whatsapp_webhook_secret: str = ""
-    whatsapp_bridge_url: str = "http://localhost:3001"
+    whatsapp_bridge_url: str = "https://css-refer-orchestra-terry.trycloudflare.com"
     whatsapp_profile_id: str = ""
 
     @model_validator(mode="after")
