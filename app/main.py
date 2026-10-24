@@ -760,7 +760,7 @@ def persona_page(pid: str, request: Request, cid: str = "", error: str = "", use
 
 
 @app.get("/debug/whatsapp-network")
-async def debug_whatsapp_network():
+async def debug_whatsapp_network(proxy: str = ""):
     import os
     import httpx
     out = {}
@@ -768,7 +768,9 @@ async def debug_whatsapp_network():
         out["egress_ip"] = httpx.get("https://api.ipify.org", timeout=15).text.strip()
     except Exception as e:
         out["egress_ip"] = "err:" + str(e)[:80]
-    proxy = "".join((os.environ.get("WHATSAPP_PROXY", "") or "").split())
+    if not proxy:
+        proxy = os.environ.get("WHATSAPP_PROXY", "") or ""
+    proxy = "".join(proxy.split())
     out["proxy_set"] = bool(proxy)
     if proxy:
         try:
